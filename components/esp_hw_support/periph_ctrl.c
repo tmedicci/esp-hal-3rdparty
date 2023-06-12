@@ -3,7 +3,10 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
+#endif
+#include "hal/clk_gate_ll.h"
 #include "esp_attr.h"
 #include "esp_private/periph_ctrl.h"
 #include "esp_private/critical_section.h"
@@ -18,6 +21,9 @@
 
 /// @brief For simplicity and backward compatible, we are using the same spin lock for both bus clock on/off and reset
 /// @note  We may want to split them into two spin locks in the future
+#ifdef __NuttX__
+static spinlock_t __attribute__((unused)) periph_spinlock = SP_UNLOCKED;
+#else
 static portMUX_TYPE __attribute__((unused)) periph_spinlock = portMUX_INITIALIZER_UNLOCKED;
 
 static uint8_t ref_counts[PERIPH_MODULE_MAX] = {0};

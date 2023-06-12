@@ -1052,7 +1052,11 @@ static esp_err_t s_verify_write(esp_flash_t *chip, uint32_t verify_address, uint
 //When use the ROM impl, can't use these debugging utils.
 esp_err_t esp_flash_write(esp_flash_t *chip, const void *buffer, uint32_t address, uint32_t length)
 {
+#ifndef __NuttX__
     esp_err_t ret = ESP_FAIL;
+#else
+    esp_err_t ret_c = ESP_FAIL;
+#endif
 #if CONFIG_SPI_FLASH_VERIFY_WRITE
     //used for verify write
     bool is_encrypted = false;
@@ -1164,9 +1168,14 @@ esp_err_t esp_flash_write(esp_flash_t *chip, const void *buffer, uint32_t addres
 
 restore_cache:
     COUNTER_STOP(write);
+#ifndef __NuttX__
     ret = rom_spiflash_api_funcs->flash_end_flush_cache(chip, err, bus_acquired, address, length);
-    if (ret != ESP_OK) {
-       ESP_DRAM_LOGE(TAG, "restore cache fail\n");
+    if (ret != ESP_OK) {    
+#else
+    ret_c = rom_spiflash_api_funcs->flash_end_flush_cache(chip, err, bus_acquired, address, length);
+    if (ret_c != ESP_OK) {
+#endif // __NuttX__
+        ESP_DRAM_LOGE(TAG, "restore cache fail\n");
     }
 
     return err;
@@ -1281,7 +1290,11 @@ FORCE_INLINE_ATTR esp_err_t s_encryption_write_unlock(esp_flash_t *chip) {
 //When use the ROM impl, can't use these debugging utils.
 esp_err_t esp_flash_write_encrypted(esp_flash_t *chip, uint32_t address, const void *buffer, uint32_t length)
 {
+#ifndef __NuttX__
     esp_err_t ret = ESP_FAIL;
+#else
+    esp_err_t ret_c = ESP_FAIL;
+#endif
 #if CONFIG_SPI_FLASH_VERIFY_WRITE
     //used for verify write
     bool is_encrypted = true;
@@ -1491,8 +1504,13 @@ restore_cache:
     s_encryption_write_unlock(chip);
     bus_acquired = false;
     COUNTER_STOP(write);
+#ifndef __NuttX__
     ret = rom_spiflash_api_funcs->flash_end_flush_cache(chip, err, bus_acquired, address, length);
     if (ret != ESP_OK) {
+#else
+    ret_c = rom_spiflash_api_funcs->flash_end_flush_cache(chip, err, bus_acquired, address, length);
+    if (ret_c != ESP_OK) {
+#endif // __NuttX__
        ESP_DRAM_LOGE(TAG, "restore cache fail\n");
     }
 

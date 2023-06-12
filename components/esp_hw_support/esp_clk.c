@@ -9,8 +9,12 @@
 #include <sys/param.h>
 #include <sys/lock.h>
 
+#ifdef __NuttX__
+#include <nuttx/spinlock.h>
+#else
 #if !NON_OS_BUILD
 #include "freertos/FreeRTOS.h"
+#endif
 #endif
 
 #include "esp_attr.h"
@@ -39,7 +43,11 @@ extern uint32_t g_ticks_per_us_pro;
 // Any code utilizing locks, which depend on FreeRTOS, should be omitted
 // when building for Non-OS environments
 #if !NON_OS_BUILD
+#ifdef __NuttX__
+static spinlock_t __attribute__((unused)) s_esp_rtc_time_lock = SP_UNLOCKED;
+#else
 static portMUX_TYPE __attribute__((unused)) s_esp_rtc_time_lock = portMUX_INITIALIZER_UNLOCKED;
+#endif
 #endif
 
 #if SOC_RTC_MEM_SUPPORTED

@@ -34,8 +34,17 @@
 #define SEARCH_REQUEST_RX_CHANNEL (1 << 0)
 #define SEARCH_REQUEST_TX_CHANNEL (1 << 1)
 
+#ifdef __NuttX__
+#  include <nuttx/kmalloc.h>
+#  include "esp_irq.h"
+
+#  define heap_caps_calloc(n, s, c)  kmm_calloc(n, s)
+#  define free(p)                    kmm_free(p)
+
+#endif
+
 typedef struct gdma_platform_t {
-    portMUX_TYPE spinlock;                       // platform level spinlock, protect the group handle slots and reference count of each group.
+    DECLARE_CRIT_SECTION_LOCK_IN_STRUCT(spinlock)                       // platform level spinlock, protect the group handle slots and reference count of each group.
     gdma_group_t *groups[GDMA_LL_GET(INST_NUM)]; // array of GDMA group instances
     int group_ref_counts[GDMA_LL_GET(INST_NUM)]; // reference count used to protect group install/uninstall
 } gdma_platform_t;
@@ -51,7 +60,7 @@ static esp_err_t gdma_install_tx_interrupt(gdma_tx_channel_t *tx_chan);
 
 // gdma driver platform
 static gdma_platform_t s_platform = {
-    .spinlock = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED,
+    INIT_CRIT_SECTION_LOCK_IN_STRUCT(spinlock)
 };
 
 typedef struct {
@@ -507,7 +516,13 @@ esp_err_t gdma_register_tx_event_callbacks(gdma_channel_handle_t dma_chan, gdma_
     memcpy(&tx_chan->cbs, cbs, sizeof(gdma_tx_event_callbacks_t));
     tx_chan->user_data = user_data;
 
+#ifndef __NuttX__
     ESP_RETURN_ON_ERROR(esp_intr_enable(dma_chan->intr), TAG, "enable interrupt failed");
+#else
+    int periph = gdma_periph_signals.groups[group->group_id].pairs[pair->pair_id].tx_irq_id;
+    int tx_irq = ESP_SOURCE2IRQ(periph);
+    up_enable_irq(tx_irq);
+#endif
 
     return ESP_OK;
 }
@@ -552,7 +567,13 @@ esp_err_t gdma_register_rx_event_callbacks(gdma_channel_handle_t dma_chan, gdma_
     memcpy(&rx_chan->cbs, cbs, sizeof(gdma_rx_event_callbacks_t));
     rx_chan->user_data = user_data;
 
+#ifndef __NuttX__
     ESP_RETURN_ON_ERROR(esp_intr_enable(dma_chan->intr), TAG, "enable interrupt failed");
+#else
+    int periph = gdma_periph_signals.groups[group->group_id].pairs[pair->pair_id].rx_irq_id;
+    int rx_irq = ESP_SOURCE2IRQ(periph);
+    up_enable_irq(rx_irq);
+#endif
 
     return ESP_OK;
 }
@@ -656,7 +677,7 @@ static gdma_group_t *gdma_acquire_group_handle(int group_id, void (*hal_init)(gd
         s_platform.groups[group_id] = group; // register to platform
 
         group->group_id = group_id;
-        group->spinlock = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED;
+        INIT_CRIT_SECTION_LOCK_RUNTIME(&(group->spinlock));
         // enable APB to access GDMA registers
         PERIPH_RCC_ATOMIC() {
             gdma_ll_enable_bus_clock(group_id, true);
@@ -763,6 +784,7 @@ static esp_err_t gdma_del_tx_channel(gdma_channel_t *dma_channel)
     pair->occupy_code &= ~SEARCH_REQUEST_TX_CHANNEL;
     esp_os_exit_critical(&pair->spinlock);
 
+#ifndef __NuttX__
     if (dma_channel->intr) {
         esp_intr_free(dma_channel->intr);
         esp_os_enter_critical(&pair->spinlock);
@@ -771,6 +793,7 @@ static esp_err_t gdma_del_tx_channel(gdma_channel_t *dma_channel)
         esp_os_exit_critical(&pair->spinlock);
         ESP_LOGD(TAG, "uninstall interrupt service for tx channel (%d,%d)", group_id, pair_id);
     }
+#endif
 
     free(tx_chan);
     ESP_LOGD(TAG, "del tx channel (%d,%d)", group_id, pair_id);
@@ -798,6 +821,7 @@ static esp_err_t gdma_del_rx_channel(gdma_channel_t *dma_channel)
     pair->occupy_code &= ~SEARCH_REQUEST_RX_CHANNEL;
     esp_os_exit_critical(&pair->spinlock);
 
+#ifndef __NuttX__
     if (dma_channel->intr) {
         esp_intr_free(dma_channel->intr);
         esp_os_enter_critical(&pair->spinlock);
@@ -806,6 +830,7 @@ static esp_err_t gdma_del_rx_channel(gdma_channel_t *dma_channel)
         esp_os_exit_critical(&pair->spinlock);
         ESP_LOGD(TAG, "uninstall interrupt service for rx channel (%d,%d)", group_id, pair_id);
     }
+#endif
 
     free(rx_chan);
     ESP_LOGD(TAG, "del rx channel (%d,%d)", group_id, pair_id);
@@ -819,7 +844,11 @@ static esp_err_t gdma_del_rx_channel(gdma_channel_t *dma_channel)
     return ESP_OK;
 }
 
+#ifndef __NuttX__
 void gdma_default_rx_isr(void *args)
+#else
+int gdma_default_rx_isr(int irq, void *context, void *args)
+#endif
 {
     gdma_rx_channel_t *rx_chan = (gdma_rx_channel_t *)args;
     gdma_pair_t *pair = rx_chan->base.pair;
@@ -868,11 +897,18 @@ void gdma_default_rx_isr(void *args)
     }
 
     if (need_yield) {
+#ifndef __NuttX__
         portYIELD_FROM_ISR();
+#endif
     }
+    return 0;
 }
 
+#ifndef __NuttX__
 void gdma_default_tx_isr(void *args)
+#else
+int gdma_default_tx_isr(int irq, void *context, void *args)
+#endif
 {
     gdma_tx_channel_t *tx_chan = (gdma_tx_channel_t *)args;
     gdma_pair_t *pair = tx_chan->base.pair;
@@ -896,8 +932,11 @@ void gdma_default_tx_isr(void *args)
         need_yield |= tx_chan->cbs.on_descr_err(&tx_chan->base, NULL, tx_chan->user_data);
     }
     if (need_yield) {
+#ifndef __NuttX__
         portYIELD_FROM_ISR();
+#endif
     }
+    return 0;
 }
 
 static esp_err_t gdma_install_rx_interrupt(gdma_rx_channel_t *rx_chan)
@@ -915,6 +954,7 @@ static esp_err_t gdma_install_rx_interrupt(gdma_rx_channel_t *rx_chan)
 #if GDMA_LL_AHB_TX_RX_SHARE_INTERRUPT
     isr_flags |= ESP_INTR_FLAG_SHARED;
 #endif
+#ifndef __NuttX__
     intr_handle_t intr = NULL;
     ret = esp_intr_alloc_intrstatus(gdma_periph_signals.groups[group->group_id].pairs[pair_id].rx_irq_id, isr_flags,
                                     gdma_hal_get_intr_status_reg(hal, pair_id, GDMA_CHANNEL_DIRECTION_RX), GDMA_LL_RX_EVENT_MASK,
@@ -947,6 +987,7 @@ static esp_err_t gdma_install_tx_interrupt(gdma_tx_channel_t *tx_chan)
 #if GDMA_LL_AHB_TX_RX_SHARE_INTERRUPT
     isr_flags |= ESP_INTR_FLAG_SHARED;
 #endif
+#ifndef __NuttX__
     intr_handle_t intr = NULL;
     ret = esp_intr_alloc_intrstatus(gdma_periph_signals.groups[group->group_id].pairs[pair_id].tx_irq_id, isr_flags,
                                     gdma_hal_get_intr_status_reg(hal, pair_id, GDMA_CHANNEL_DIRECTION_TX), GDMA_LL_TX_EVENT_MASK,

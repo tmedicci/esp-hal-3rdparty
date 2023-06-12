@@ -21,8 +21,9 @@
 #include "hal/efuse_hal.h"
 #include "hal/cache_hal.h"
 #include "hal/mmu_hal.h"
+#ifndef __NuttX__
 #include "esp_bootloader_desc.h"
-#include "esp_rom_sys.h"
+#endif
 
 ESP_LOG_ATTR_TAG(TAG, "boot");
 
@@ -108,6 +109,7 @@ void bootloader_enable_random(void)
     bootloader_random_enable();
 }
 
+#ifndef __NuttX__
 void bootloader_print_banner(void)
 {
     if (CONFIG_BOOTLOADER_LOG_LEVEL >= ESP_LOG_INFO) {
