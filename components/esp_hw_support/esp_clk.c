@@ -10,7 +10,7 @@
 #include <sys/lock.h>
 
 #if !NON_OS_BUILD
-#include "freertos/FreeRTOS.h"
+#include "platform/os.h"
 #endif
 
 #include "esp_attr.h"
@@ -39,7 +39,7 @@ extern uint32_t g_ticks_per_us_pro;
 // Any code utilizing locks, which depend on FreeRTOS, should be omitted
 // when building for Non-OS environments
 #if !NON_OS_BUILD
-static portMUX_TYPE __attribute__((unused)) s_esp_rtc_time_lock = portMUX_INITIALIZER_UNLOCKED;
+DEFINE_CRIT_SECTION_LOCK_STATIC(s_esp_rtc_time_lock, __attribute__((unused)));
 #endif
 
 #if SOC_RTC_MEM_SUPPORTED
@@ -102,7 +102,9 @@ int IRAM_ATTR esp_clk_xtal_freq(void)
 #if !NON_OS_BUILD
 uint64_t esp_rtc_get_time_us(void)
 {
+#if !(defined(__NuttX__) && defined(CONFIG_IDF_TARGET_ESP32S2))
     esp_os_enter_critical_safe(&s_esp_rtc_time_lock);
+#endif
     const uint32_t cal = esp_clk_slowclk_cal_get();
 #if SOC_RTC_MEM_SUPPORTED
     static bool first_call = true;
@@ -145,11 +147,15 @@ uint64_t esp_rtc_get_time_us(void)
     s_rtc_timer_retain_mem.rtc_last_ticks = rtc_this_ticks;
     s_rtc_timer_retain_mem.checksum = calc_checksum();
     uint64_t esp_rtc_time_us = s_rtc_timer_retain_mem.rtc_time_us;
+#if !(defined(__NuttX__) && defined(CONFIG_IDF_TARGET_ESP32S2))
     esp_os_exit_critical_safe(&s_esp_rtc_time_lock);
+#endif
     return esp_rtc_time_us;
 #else
     uint64_t esp_rtc_time_us = delta_time_us + clk_ll_rtc_slow_load_rtc_fix_us();
+#if !(defined(__NuttX__) && defined(CONFIG_IDF_TARGET_ESP32S2))
     esp_os_exit_critical_safe(&s_esp_rtc_time_lock);
+#endif
     return esp_rtc_time_us;
 #endif
 }

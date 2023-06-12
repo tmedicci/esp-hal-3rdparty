@@ -10,11 +10,15 @@
 #include <stdio.h>
 #include <sys/param.h>  // For MIN/MAX(a, b)
 
+#ifndef __NuttX__
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/semphr.h>
+#endif
 #include <soc/soc.h>
+#ifndef __NuttX__
 #include <soc/soc_memory_layout.h>
+#endif
 #include "soc/io_mux_reg.h"
 #include "soc/spi_pins.h"
 #include "sdkconfig.h"
@@ -135,7 +139,6 @@ void IRAM_ATTR spi_flash_rom_impl_init(void)
     /* These two functions are in ROM only */
     extern void spi_flash_mmap_os_func_set(void *(*func1)(size_t size), void (*func2)(void *p));
     spi_flash_mmap_os_func_set(spi_flash_malloc_internal, heap_caps_free);
-
     extern esp_err_t spi_flash_mmap_page_num_init(uint32_t page_num);
     spi_flash_mmap_page_num_init(128);
 #endif // ESP_ROM_HAS_SPI_FLASH_MMAP
@@ -158,6 +161,8 @@ void IRAM_ATTR esp_mspi_pin_init(void)
 #endif
 }
 
+#ifndef __NuttX__
+
 void esp_mspi_pin_reserve(void)
 {
     uint64_t reserve_pin_mask = 0;
@@ -176,6 +181,7 @@ void esp_mspi_pin_reserve(void)
     }
     esp_gpio_reserve(reserve_pin_mask);
 }
+#endif
 
 esp_err_t IRAM_ATTR spi_flash_init_chip_state(void)
 {

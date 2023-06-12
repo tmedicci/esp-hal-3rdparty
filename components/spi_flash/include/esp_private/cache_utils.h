@@ -17,6 +17,12 @@
 extern "C" {
 #endif
 
+#ifdef __NuttX__
+extern sem_t g_cpu_prepare_sem[CONFIG_SMP_NCPUS];
+extern volatile bool s_flash_op_can_start;
+extern volatile bool s_flash_op_complete;
+#endif
+
 /**
  * This header file contains declarations of cache manipulation functions
  * used both in flash_ops.c and flash_mmap.c.

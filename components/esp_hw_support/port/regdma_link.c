@@ -19,6 +19,9 @@
 #include "esp_compiler.h"
 
 
+#if __has_include("platform/os.h")
+#include "platform/os.h"
+#endif
 
 #define REGDMA_LINK_ADDR_ALIGN      (4)
 #if CONFIG_IDF_TARGET_ESP32P4

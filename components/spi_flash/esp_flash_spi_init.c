@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#ifdef __NuttX__
+#include <nuttx/mutex.h>
+#endif
 #include "sdkconfig.h"
 #include "driver/gpio.h"
 #include "esp_rom_gpio.h"
@@ -228,9 +231,14 @@ static esp_err_t acquire_spi_device(const esp_flash_spi_device_config_t *config,
 
     if (use_bus_lock(config->host_id)) {
         spi_bus_lock_handle_t lock = spi_bus_lock_get_by_id(config->host_id);
+#ifndef __NuttX__
         spi_bus_lock_dev_config_t config = {.flags = SPI_BUS_LOCK_DEV_FLAG_CS_REQUIRED};
 
         ret = spi_bus_lock_register_dev(lock, &config, &dev_handle);
+#else
+        spi_bus_lock_dev_config_t cfg = {.flags = SPI_BUS_LOCK_DEV_FLAG_CS_REQUIRED};
+        ret = spi_bus_lock_register_dev(lock, &cfg, &dev_handle);
+#endif
         if (ret == ESP_OK) {
             dev_id = spi_bus_lock_get_dev_id(dev_handle);
         } else if (ret == ESP_ERR_NOT_SUPPORTED) {

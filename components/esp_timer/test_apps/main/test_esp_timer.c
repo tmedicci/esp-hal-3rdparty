@@ -94,8 +94,8 @@ static void set_alarm_task(void* arg)
 {
     SemaphoreHandle_t done = (SemaphoreHandle_t) arg;
 
-    int64_t start = esp_timer_impl_get_time();
-    int64_t now = start;
+    uint64_t start = esp_timer_impl_get_time();
+    uint64_t now = start;
     int count = 0;
     const int delays[] = {50, 5000, 10000000};
     const int delays_count = sizeof(delays) / sizeof(delays[0]);
