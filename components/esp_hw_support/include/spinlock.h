@@ -17,6 +17,9 @@
 #include "riscv/rv_utils.h"
 #endif
 
+#ifdef __NuttX__
+#include <nuttx/spinlock.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,6 +31,9 @@ extern "C" {
 #define NEED_VOLATILE_MUX
 #endif
 
+#ifdef __NuttX__
+#define SPINLOCK_INITIALIZER   SP_UNLOCKED
+#else
 #define SPINLOCK_FREE          0xB33FFFFF
 #define SPINLOCK_WAIT_FOREVER  (-1)
 #define SPINLOCK_NO_WAIT        0
@@ -43,6 +49,7 @@ typedef struct {
     NEED_VOLATILE_MUX uint32_t owner;
     NEED_VOLATILE_MUX uint32_t count;
 } spinlock_t;
+#endif
 
 /**
  * @brief Initialize a lock to its default state - unlocked
@@ -51,11 +58,17 @@ typedef struct {
 static inline void __attribute__((always_inline)) spinlock_initialize(spinlock_t *lock)
 {
     assert(lock);
+#ifdef __NuttX__
+    spin_lock_init(lock);
+#else
 #if !CONFIG_ESP_SYSTEM_SINGLE_CORE_MODE
     lock->owner = SPINLOCK_FREE;
     lock->count = 0;
 #endif
+#endif
 }
+
+#ifndef __NuttX__
 
 /**
  * @brief Top level spinlock acquire function, spins until get the lock
@@ -91,7 +104,6 @@ static inline bool __attribute__((always_inline)) spinlock_acquire(spinlock_t *l
 
     irq_status = rv_utils_set_intlevel_regval(RVHAL_EXCM_LEVEL_CLIC);
     core_owner_id = rv_utils_get_core_id() == 0 ? SPINLOCK_OWNER_ID_0 : SPINLOCK_OWNER_ID_1;
-#endif
     other_core_owner_id = CORE_ID_REGVAL_XOR_SWAP ^ core_owner_id;
 
     /* lock->owner should be one of SPINLOCK_FREE, CORE_ID_REGVAL_PRO,
@@ -112,6 +124,7 @@ static inline bool __attribute__((always_inline)) spinlock_acquire(spinlock_t *l
 #endif
         return true;
     }
+#endif
 
     /* First attempt to take the lock.
      *
@@ -120,6 +133,7 @@ static inline bool __attribute__((always_inline)) spinlock_acquire(spinlock_t *l
      * is the case for the majority of spinlock_acquire() calls (as spinlocks are free most of the time since they
      * aren't meant to be held for long).
      */
+
     lock_set = esp_cpu_compare_and_set(&lock->owner, SPINLOCK_FREE, core_owner_id);
     if (lock_set || timeout == SPINLOCK_NO_WAIT) {
         // We've successfully taken the lock, or we are not retrying
@@ -129,6 +143,7 @@ static inline bool __attribute__((always_inline)) spinlock_acquire(spinlock_t *l
     // First attempt to take the lock has failed. Retry until the lock is taken, or until we timeout.
     start_count = esp_cpu_get_cycle_count();
     do {
+
         lock_set = esp_cpu_compare_and_set(&lock->owner, SPINLOCK_FREE, core_owner_id);
         if (lock_set) {
             break;
@@ -137,6 +152,7 @@ static inline bool __attribute__((always_inline)) spinlock_acquire(spinlock_t *l
     } while ((timeout == SPINLOCK_WAIT_FOREVER) || (esp_cpu_get_cycle_count() - start_count) <= (esp_cpu_cycle_count_t)timeout);
 
 exit:
+
     if (lock_set) {
         assert(lock->owner == core_owner_id);
         assert(lock->count == 0);   // This is the first time the lock is set, so count should still be 0
@@ -145,7 +161,6 @@ exit:
         assert(lock->owner == SPINLOCK_FREE || lock->owner == other_core_owner_id);
         assert(lock->count < 0xFF); // Bad count value implies memory corruption
     }
-
 #if __XTENSA__
     XTOS_RESTORE_INTLEVEL(irq_status);
 #else
@@ -203,6 +218,8 @@ static inline void __attribute__((always_inline)) spinlock_release(spinlock_t *l
 #endif  //#if __XTENSA__
 #endif  //#if !CONFIG_ESP_SYSTEM_SINGLE_CORE_MODE && !BOOTLOADER_BUILD
 }
+
+#endif
 
 #ifdef __cplusplus
 }

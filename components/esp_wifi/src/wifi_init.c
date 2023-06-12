@@ -10,13 +10,19 @@
 #include "esp_private/wifi.h"
 #include "esp_private/adc_share_hw_ctrl.h"
 #include "esp_private/sleep_modem.h"
+#ifndef __NuttX__
 #include "esp_pm.h"
+#endif
 #include "esp_sleep.h"
 #include "esp_check.h"
+#ifndef __NuttX__
 #include "esp_private/pm_impl.h"
+#endif
 #include "esp_private/esp_clk.h"
 #include "esp_wpa.h"
+#ifndef __NuttX__
 #include "esp_netif.h"
+#endif
 #ifdef CONFIG_ESP_COEX_ENABLED
 #include "private/esp_coexist_internal.h"
 #endif
@@ -488,7 +494,9 @@ esp_err_t esp_wifi_init(const wifi_init_config_t *config)
     esp_wifi_beacon_offset_configure(&offset_config);
 #endif
 
+#ifndef __NuttX__
     adc2_cal_include(); //This enables the ADC2 calibration constructor at start up.
+#endif
 
     esp_wifi_config_info();
 

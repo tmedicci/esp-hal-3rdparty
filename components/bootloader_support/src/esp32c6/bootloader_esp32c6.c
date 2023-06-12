@@ -45,6 +45,9 @@
 #include "hal/lpwdt_ll.h"
 #include "hal/regi2c_ctrl_ll.h"
 #include "hal/brownout_ll.h"
+#ifdef __NuttX__
+#include "esp_efuse_utility.h"
+#endif
 
 static const char *TAG = "boot.esp32c6";
 
@@ -68,7 +71,7 @@ static void bootloader_check_wdt_reset(void)
     soc_reset_reason_t rst_reason = esp_rom_get_reset_reason(0);
     if (rst_reason == RESET_REASON_CORE_RTC_WDT || rst_reason == RESET_REASON_CORE_MWDT0 || rst_reason == RESET_REASON_CORE_MWDT1 ||
         rst_reason == RESET_REASON_CPU0_MWDT0 || rst_reason == RESET_REASON_CPU0_MWDT1 || rst_reason == RESET_REASON_CPU0_RTC_WDT) {
-        ESP_LOGW(TAG, "PRO CPU has been reset by WDT.");
+        ESP_EARLY_LOGW(TAG, "PRO CPU has been reset by WDT.");
         wdt_rst = 1;
     }
     if (wdt_rst) {
