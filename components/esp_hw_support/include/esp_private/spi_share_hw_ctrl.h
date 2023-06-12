@@ -12,10 +12,18 @@
 #include "soc/spi_periph.h"
 #include "soc/gpio_struct.h"
 #include "esp_private/periph_ctrl.h"
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#ifdef __NuttX__
+typedef uint32_t        TickType_t;
+typedef uint32_t        UBaseType_t;
+typedef int32_t         BaseType_t;
 #endif
 
 #if !SOC_RCC_IS_INDEPENDENT
@@ -395,7 +403,9 @@ esp_err_t spi_bus_lock_bg_request(spi_bus_lock_dev_handle_t dev_handle);
  *  - ESP_ERR_INVALID_STATE: The device is not the acquiring bus.
  *  - ESP_ERR_INVALID_ARG: Timeout is not portMAX_DELAY.
  */
+#ifndef __NuttX__
 esp_err_t spi_bus_lock_wait_bg_done(spi_bus_lock_dev_handle_t dev_handle, TickType_t wait);
+#endif
 
 /**
  * Handle interrupt and closure of last operation. Should be called at the beginning of the ISR,
@@ -437,7 +447,9 @@ bool spi_bus_lock_bg_entry(spi_bus_lock_handle_t lock);
  * @return false if retry is required, indicating that there is pending BG request.
  *         otherwise true and quit ISR is allowed.
  */
+#ifndef __NuttX__
 bool spi_bus_lock_bg_exit(spi_bus_lock_handle_t lock, bool wip, BaseType_t* do_yield);
+#endif
 
 /**
  * Check whether there is device asking for the acquiring device, and the desired

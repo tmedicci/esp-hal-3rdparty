@@ -145,43 +145,75 @@ __attribute__((always_inline)) static inline bool efuse_ll_get_pgm_cmd(void)
 
 __attribute__((always_inline)) static inline void efuse_ll_set_read_cmd(void)
 {
+#ifndef __NuttX__
     EFUSE.cmd.read_cmd = 1;
+#else
+    HAL_FORCE_MODIFY_U32_REG_FIELD(EFUSE.cmd, read_cmd, 1);
+#endif
 }
 
 __attribute__((always_inline)) static inline void efuse_ll_set_pgm_cmd(uint32_t block)
 {
     HAL_ASSERT(block < ETS_EFUSE_BLOCK_MAX);
+#ifndef __NuttX__
     EFUSE.cmd.val = ((block << EFUSE_BLK_NUM_S) & EFUSE_BLK_NUM_M) | EFUSE_PGM_CMD;
+#else
+    HAL_FORCE_MODIFY_U32_REG_FIELD(EFUSE.cmd, val, ((block << EFUSE_BLK_NUM_S) & EFUSE_BLK_NUM_M) | EFUSE_PGM_CMD);
+#endif
 }
 
 __attribute__((always_inline)) static inline void efuse_ll_set_conf_read_op_code(void)
 {
+#ifndef __NuttX__
     EFUSE.conf.op_code = EFUSE_READ_OP_CODE;
+#else
+    HAL_FORCE_MODIFY_U32_REG_FIELD(EFUSE.conf, op_code, EFUSE_READ_OP_CODE);
+#endif
 }
 
 __attribute__((always_inline)) static inline void efuse_ll_set_conf_write_op_code(void)
 {
+#ifndef __NuttX__
     EFUSE.conf.op_code = EFUSE_WRITE_OP_CODE;
+#else
+    HAL_FORCE_MODIFY_U32_REG_FIELD(EFUSE.conf, op_code, EFUSE_WRITE_OP_CODE);
+#endif
 }
 
 __attribute__((always_inline)) static inline void efuse_ll_set_dac_num(uint8_t val)
 {
+#ifndef __NuttX__
     EFUSE.dac_conf.dac_num = val;
+#else
+    HAL_FORCE_MODIFY_U32_REG_FIELD(EFUSE.dac_conf, dac_num, val);
+#endif
 }
 
 __attribute__((always_inline)) static inline void efuse_ll_set_dac_clk_div(uint8_t val)
 {
+#ifndef __NuttX__
     EFUSE.dac_conf.dac_clk_div = val;
+#else
+    HAL_FORCE_MODIFY_U32_REG_FIELD(EFUSE.dac_conf, dac_clk_div, val);
+#endif
 }
 
 __attribute__((always_inline)) static inline void efuse_ll_set_pwr_on_num(uint16_t val)
 {
+#ifndef __NuttX__
     EFUSE.wr_tim_conf1.pwr_on_num = val;
+#else
+    HAL_FORCE_MODIFY_U32_REG_FIELD(EFUSE.wr_tim_conf1, pwr_on_num, val);
+#endif
 }
 
 __attribute__((always_inline)) static inline void efuse_ll_set_pwr_off_num(uint16_t value)
 {
+#ifndef __NuttX__
     EFUSE.wr_tim_conf2.pwr_off_num = value;
+#else
+    HAL_FORCE_MODIFY_U32_REG_FIELD(EFUSE.wr_tim_conf2, pwr_off_num, value);
+#endif
 }
 
 __attribute__((always_inline)) static inline uint32_t efuse_ll_get_controller_state(void)
