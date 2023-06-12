@@ -8,13 +8,21 @@
 The linker will link constructor (adc2_init_code_calibration) only when any sections inside the same file (adc2_cal_include) is used.
 Don't put any other code into this file. */
 
+#ifdef __NuttX__
+#include <nuttx/spinlock.h>
+#else
 #include "freertos/FreeRTOS.h"
+#endif
 #include "hal/adc_types.h"
 #include "hal/adc_hal_common.h"
 #include "esp_private/adc_share_hw_ctrl.h"
 #include "esp_private/critical_section.h"
 
+#ifdef __NuttX__
+extern rspinlock_t rtc_spinlock;
+#else
 extern portMUX_TYPE rtc_spinlock;
+#endif
 
 /**
  * @brief Set initial code to ADC2 after calibration. ADC2 RTC and ADC2 PWDET controller share the initial code.

@@ -33,7 +33,7 @@ typedef struct {
 TEST_RMT_CALLBACK_ATTR
 static bool test_rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data)
 {
-    BaseType_t high_task_wakeup = pdFALSE;
+    OS_BASE_TYPE high_task_wakeup = OS_FALSE;
     test_rx_user_data_t *test_user_data = (test_rx_user_data_t *)user_data;
     rmt_symbol_word_t *remote_codes = edata->received_symbols;
     esp_rom_printf("%u symbols decoded:\r\n", edata->num_symbols);
@@ -42,13 +42,13 @@ static bool test_rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx
     }
     test_user_data->received_symbol_num = edata->num_symbols;
     vTaskNotifyGiveFromISR(test_user_data->task_to_notify, &high_task_wakeup);
-    return high_task_wakeup == pdTRUE;
+    return high_task_wakeup == OS_TRUE;
 }
 
 static void test_rmt_rx_nec_carrier(size_t mem_block_symbols, bool with_dma, rmt_clock_source_t clk_src)
 {
     uint32_t const test_rx_buffer_symbols = 128;
-    rmt_symbol_word_t *remote_codes = heap_caps_calloc(test_rx_buffer_symbols, sizeof(rmt_symbol_word_t),
+    rmt_symbol_word_t *remote_codes = esp_os_calloc_with_caps(test_rx_buffer_symbols, sizeof(rmt_symbol_word_t),
                                                        MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
     TEST_ASSERT_NOT_NULL(remote_codes);
 
@@ -105,7 +105,7 @@ static void test_rmt_rx_nec_carrier(size_t mem_block_symbols, bool with_dma, rmt
     TEST_ESP_OK(rmt_transmit(tx_channel, nec_encoder, (uint16_t[]) {
         0x0440, 0x3003 // address, command
     }, 4, &transmit_config));
-    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(1000)));
+    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(OS_FALSE, pdMS_TO_TICKS(1000)));
     TEST_ASSERT_EQUAL(34, test_user_data.received_symbol_num);
 
     TEST_ESP_OK(rmt_receive(rx_channel, remote_codes, test_rx_buffer_symbols * sizeof(rmt_symbol_word_t), &receive_config));
@@ -113,7 +113,7 @@ static void test_rmt_rx_nec_carrier(size_t mem_block_symbols, bool with_dma, rmt
     TEST_ESP_OK(rmt_transmit(tx_channel, nec_encoder, (uint16_t[]) {
         0x0440, 0x3003 // address, command
     }, 4, &transmit_config));
-    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(1000)));
+    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(OS_FALSE, pdMS_TO_TICKS(1000)));
     TEST_ASSERT_EQUAL(34, test_user_data.received_symbol_num);
 
 #if SOC_RMT_SUPPORT_RX_PINGPONG
@@ -123,7 +123,7 @@ static void test_rmt_rx_nec_carrier(size_t mem_block_symbols, bool with_dma, rmt
     TEST_ESP_OK(rmt_transmit(tx_channel, nec_encoder, (uint16_t[]) {
         0xFF00, 0xFF00, 0xFF00, 0xFF00
     }, 8, &transmit_config));
-    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(1000)));
+    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(OS_FALSE, pdMS_TO_TICKS(1000)));
     TEST_ASSERT_EQUAL(66, test_user_data.received_symbol_num);
 #else
     // ready to receive
@@ -133,7 +133,7 @@ static void test_rmt_rx_nec_carrier(size_t mem_block_symbols, bool with_dma, rmt
     TEST_ESP_OK(rmt_transmit(tx_channel, nec_encoder, (uint16_t[]) {
         0xFF00, 0xFF00, 0xFF00, 0xFF00, 0xFF00
     }, 10, &transmit_config));
-    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(1000)));
+    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(OS_FALSE, pdMS_TO_TICKS(1000)));
     TEST_ASSERT_EQUAL(test_user_data.received_symbol_num, mem_block_symbols);
 #endif // SOC_RMT_SUPPORT_RX_PINGPONG
 
@@ -155,7 +155,7 @@ static void test_rmt_rx_nec_carrier(size_t mem_block_symbols, bool with_dma, rmt
     TEST_ESP_OK(rmt_transmit(tx_channel, nec_encoder, (uint16_t[]) {
         0x0440, 0x3003 // address, command
     }, 4, &transmit_config));
-    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(1000)));
+    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(OS_FALSE, pdMS_TO_TICKS(1000)));
     TEST_ASSERT_EQUAL(34, test_user_data.received_symbol_num);
 
 #if SOC_RMT_SUPPORT_RX_PINGPONG
@@ -164,7 +164,7 @@ static void test_rmt_rx_nec_carrier(size_t mem_block_symbols, bool with_dma, rmt
     TEST_ESP_OK(rmt_transmit(tx_channel, nec_encoder, (uint16_t[]) {
         0xFF00, 0xFF00, 0xFF00, 0xFF00
     }, 8, &transmit_config));
-    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(1000)));
+    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(OS_FALSE, pdMS_TO_TICKS(1000)));
     TEST_ASSERT_EQUAL(66, test_user_data.received_symbol_num);
 #endif // SOC_RMT_SUPPORT_RX_PINGPONG
 
@@ -178,7 +178,7 @@ static void test_rmt_rx_nec_carrier(size_t mem_block_symbols, bool with_dma, rmt
     TEST_ESP_OK(rmt_transmit(tx_channel, nec_encoder, (uint16_t[]) {
         0x0440, 0x3003 // address, command
     }, 4, &transmit_config));
-    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(1000)));
+    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(OS_FALSE, pdMS_TO_TICKS(1000)));
     TEST_ASSERT_EQUAL(34, test_user_data.received_symbol_num);
 
     TEST_ESP_OK(rmt_tx_wait_all_done(tx_channel, -1));
@@ -221,20 +221,20 @@ static void pwm_bit_bang(int gpio_num, int count)
 TEST_RMT_CALLBACK_ATTR
 static bool test_rmt_partial_receive_done(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data)
 {
-    BaseType_t high_task_wakeup = pdFALSE;
+    OS_BASE_TYPE high_task_wakeup = OS_FALSE;
     test_rx_user_data_t *test_user_data = (test_rx_user_data_t *)user_data;
     test_user_data->received_symbol_num += edata->num_symbols;
     // when receive done, notify the task to check the received data
     if (edata->flags.is_last) {
         vTaskNotifyGiveFromISR(test_user_data->task_to_notify, &high_task_wakeup);
     }
-    return high_task_wakeup == pdTRUE;
+    return high_task_wakeup == OS_TRUE;
 }
 
 static void test_rmt_partial_receive(size_t mem_block_symbols, int test_symbols_num, bool with_dma, rmt_clock_source_t clk_src)
 {
     uint32_t const test_rx_buffer_symbols = 128; // the user buffer is small, it can't hold all the received symbols
-    rmt_symbol_word_t *receive_user_buf = heap_caps_calloc(test_rx_buffer_symbols, sizeof(rmt_symbol_word_t),
+    rmt_symbol_word_t *receive_user_buf = esp_os_calloc_with_caps(test_rx_buffer_symbols, sizeof(rmt_symbol_word_t),
                                                            MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
     TEST_ASSERT_NOT_NULL(receive_user_buf);
 
@@ -282,7 +282,7 @@ static void test_rmt_partial_receive(size_t mem_block_symbols, int test_symbols_
     // simulate input signal by GPIO
     pwm_bit_bang(TEST_RMT_GPIO_NUM_A, test_symbols_num);
 
-    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(2000)));
+    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(OS_FALSE, pdMS_TO_TICKS(2000)));
     printf("received %zu symbols\r\n", test_user_data.received_symbol_num);
     TEST_ASSERT_EQUAL(test_symbols_num, test_user_data.received_symbol_num);
     // verify the received data
@@ -321,20 +321,20 @@ TEST_CASE("rmt rx boundary conditions", "[rmt]")
 TEST_RMT_CALLBACK_ATTR
 static bool test_rmt_received_done(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data)
 {
-    BaseType_t high_task_wakeup = pdFALSE;
+    OS_BASE_TYPE high_task_wakeup = OS_FALSE;
     test_rx_user_data_t *test_user_data = (test_rx_user_data_t *)user_data;
     test_user_data->received_symbol_num += edata->num_symbols;
     // when receive done, notify the task to check the received data
     if (edata->flags.is_last) {
         vTaskNotifyGiveFromISR(test_user_data->task_to_notify, &high_task_wakeup);
     }
-    return high_task_wakeup == pdTRUE;
+    return high_task_wakeup == OS_TRUE;
 }
 
 static void test_rmt_receive_filter(rmt_clock_source_t clk_src)
 {
     uint32_t const test_rx_buffer_symbols = 32;
-    rmt_symbol_word_t *receive_user_buf = heap_caps_calloc(test_rx_buffer_symbols, sizeof(rmt_symbol_word_t),
+    rmt_symbol_word_t *receive_user_buf = esp_os_calloc_with_caps(test_rx_buffer_symbols, sizeof(rmt_symbol_word_t),
                                                            MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
     TEST_ASSERT_NOT_NULL(receive_user_buf);
 
@@ -399,7 +399,7 @@ static void test_rmt_receive_filter(rmt_clock_source_t clk_src)
         .duration1 = 1,
     };
     TEST_ESP_OK(rmt_transmit(tx_channel, copy_encoder, &short_pulse, sizeof(short_pulse), &transmit_config));
-    TEST_ASSERT_EQUAL(0, ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(1000)));
+    TEST_ASSERT_EQUAL(0, ulTaskNotifyTake(OS_FALSE, pdMS_TO_TICKS(1000)));
     printf("received %zu symbols\r\n", test_user_data.received_symbol_num);
     TEST_ASSERT_EQUAL(0, test_user_data.received_symbol_num);
 
@@ -412,7 +412,7 @@ static void test_rmt_receive_filter(rmt_clock_source_t clk_src)
         .duration1 = 1,
     };
     TEST_ESP_OK(rmt_transmit(tx_channel, copy_encoder, &long_pulse, sizeof(long_pulse), &transmit_config));
-    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(1000)));
+    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(OS_FALSE, pdMS_TO_TICKS(1000)));
     printf("received %zu symbols\r\n", test_user_data.received_symbol_num);
     TEST_ASSERT_EQUAL(1, test_user_data.received_symbol_num);
 
@@ -444,7 +444,7 @@ TEST_CASE("rmt rx filter functionality", "[rmt]")
 TEST_RMT_CALLBACK_ATTR
 static bool test_rmt_rx_unaligned_buffer_done_callback(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data)
 {
-    BaseType_t high_task_wakeup = pdFALSE;
+    OS_BASE_TYPE high_task_wakeup = OS_FALSE;
     test_rx_user_data_t *test_user_data = (test_rx_user_data_t *)user_data;
     if (test_user_data->is_first_event) {
         test_user_data->received_symbols = edata->received_symbols;
@@ -454,7 +454,7 @@ static bool test_rmt_rx_unaligned_buffer_done_callback(rmt_channel_handle_t chan
     if (edata->flags.is_last) {
         vTaskNotifyGiveFromISR(test_user_data->task_to_notify, &high_task_wakeup);
     }
-    return high_task_wakeup == pdTRUE;
+    return high_task_wakeup == OS_TRUE;
 }
 
 static void test_rmt_unaligned_receive(size_t mem_block_symbols, int test_symbols_num, bool with_dma, bool en_partial_rx, bool rx_buffer_use_psram)
@@ -466,7 +466,7 @@ static void test_rmt_unaligned_receive(size_t mem_block_symbols, int test_symbol
     } else {
         caps |= MALLOC_CAP_INTERNAL;
     }
-    rmt_symbol_word_t *receive_user_buf = heap_caps_aligned_calloc(64, test_rx_buffer_symbols, sizeof(rmt_symbol_word_t), caps);
+    rmt_symbol_word_t *receive_user_buf = esp_os_aligned_calloc_with_caps(64, test_rx_buffer_symbols, sizeof(rmt_symbol_word_t), caps);
     TEST_ASSERT_NOT_NULL(receive_user_buf);
     rmt_symbol_word_t *receive_user_buf_unaligned = (rmt_symbol_word_t *)((uint8_t *)receive_user_buf + 1);
     size_t receive_user_buf_unaligned_size = test_rx_buffer_symbols * sizeof(rmt_symbol_word_t) - 1;
@@ -522,7 +522,7 @@ static void test_rmt_unaligned_receive(size_t mem_block_symbols, int test_symbol
     // ready to receive
     TEST_ESP_OK(rmt_receive(rx_channel, receive_user_buf_unaligned, receive_user_buf_unaligned_size, &rx_config));
 
-    rmt_symbol_word_t *transmit_buf = heap_caps_calloc(test_symbols_num, sizeof(rmt_symbol_word_t),
+    rmt_symbol_word_t *transmit_buf = esp_os_calloc_with_caps(test_symbols_num, sizeof(rmt_symbol_word_t),
                                                        MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
     for (int i = 0; i < test_symbols_num; i++) {
         transmit_buf[i] = (rmt_symbol_word_t) {
@@ -534,7 +534,7 @@ static void test_rmt_unaligned_receive(size_t mem_block_symbols, int test_symbol
     }
     TEST_ESP_OK(rmt_transmit(tx_channel, copy_encoder, transmit_buf, test_symbols_num * sizeof(rmt_symbol_word_t), &transmit_config));
 
-    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(2000)));
+    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(OS_FALSE, pdMS_TO_TICKS(2000)));
     printf("received %zu symbols\r\n", test_user_data.received_symbol_num);
     // Some chips do not support auto stop in loop mode, so the received symbol number may be slightly more than the expected
     TEST_ASSERT_INT_WITHIN(15, test_symbols_num, test_user_data.received_symbol_num);

@@ -17,6 +17,9 @@
 #include "riscv/rv_utils.h"
 #endif
 
+#ifdef __NuttX__
+#include <nuttx/spinlock.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,10 +31,12 @@ extern "C" {
 #define NEED_VOLATILE_MUX
 #endif
 
+#ifdef __NuttX__
+#define SPINLOCK_INITIALIZER   RSPINLOCK_INITIALIZER
+#else
 #define SPINLOCK_FREE          0xB33FFFFF
 #define SPINLOCK_WAIT_FOREVER  (-1)
 #define SPINLOCK_NO_WAIT        0
-#define SPINLOCK_INITIALIZER   {.owner = SPINLOCK_FREE,.count = 0}
 
 #define SPINLOCK_OWNER_ID_0 0xCDCD /* Use these values to avoid 0 being a valid lock owner, same as CORE_ID_REGVAL_PRO on Xtensa */
 #define SPINLOCK_OWNER_ID_1 0xABAB /* Same as CORE_ID_REGVAL_APP on Xtensa*/
@@ -51,11 +56,15 @@ typedef struct {
 static inline void __attribute__((always_inline)) spinlock_initialize(spinlock_t *lock)
 {
     assert(lock);
+
 #if !CONFIG_ESP_SYSTEM_SINGLE_CORE_MODE
     lock->owner = SPINLOCK_FREE;
     lock->count = 0;
 #endif
 }
+#endif
+
+#ifndef __NuttX__
 
 /**
  * @brief Top level spinlock acquire function, spins until get the lock
@@ -203,6 +212,8 @@ static inline void __attribute__((always_inline)) spinlock_release(spinlock_t *l
 #endif  //#if __XTENSA__
 #endif  //#if !CONFIG_ESP_SYSTEM_SINGLE_CORE_MODE && !BOOTLOADER_BUILD
 }
+
+#endif
 
 #ifdef __cplusplus
 }

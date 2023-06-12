@@ -2261,10 +2261,18 @@
  *
  * This module provides debugging functions.
  */
-#if CONFIG_MBEDTLS_DEBUG
-#define MBEDTLS_DEBUG_C
+#ifdef __NuttX__
+#   ifdef CONFIG_MBEDTLS_DEBUG
+#       define MBEDTLS_DEBUG_C
+#   else
+#       undef MBEDTLS_DEBUG_C
+#   endif
 #else
-#undef MBEDTLS_DEBUG_C
+#   if CONFIG_MBEDTLS_DEBUG
+#       define MBEDTLS_DEBUG_C
+#   else
+#       undef MBEDTLS_DEBUG_C
+#   endif
 #endif
 
 /**

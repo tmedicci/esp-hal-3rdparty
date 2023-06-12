@@ -13,6 +13,7 @@
 #include "esp_memory_utils.h"
 #include "esp_heap_caps.h"
 #include "esp_private/gdma_link.h"
+#include "esp_private/mem.h"
 #include "hal/cache_hal.h"
 #include "hal/cache_ll.h"
 #include "esp_cache.h"
@@ -67,7 +68,7 @@ esp_err_t gdma_new_link_list(const gdma_link_list_config_t *config, gdma_link_li
     ESP_RETURN_ON_FALSE(config->num_items, ESP_ERR_INVALID_ARG, TAG, "invalid number of items");
 
     // the link list container is allocated from internal memory
-    list = heap_caps_calloc(1, sizeof(gdma_link_list_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    list = esp_os_calloc_with_caps(1, sizeof(gdma_link_list_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     ESP_GOTO_ON_FALSE(list, ESP_ERR_NO_MEM, err, TAG, "no mem for link list");
 
     uint32_t num_items = config->num_items;
@@ -81,7 +82,7 @@ esp_err_t gdma_new_link_list(const gdma_link_list_config_t *config, gdma_link_li
     } else {
         list_items_mem_caps |= MALLOC_CAP_INTERNAL;
     }
-    items = heap_caps_aligned_calloc(item_alignment, num_items, item_size, list_items_mem_caps);
+    items = esp_os_aligned_calloc_with_caps(item_alignment, num_items, item_size, list_items_mem_caps);
     ESP_GOTO_ON_FALSE(items, ESP_ERR_NO_MEM, err, TAG, "no mem for link list items");
 
     // do memory sync if the list items are in the cache

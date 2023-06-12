@@ -6,7 +6,11 @@
 
 #include "sdkconfig.h"
 #include "esp_attr.h"
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
+#else
+#include "spinlock.h"
+#endif
 #include "esp_private/io_mux.h"
 #include "esp_private/critical_section.h"
 #include "hal/rtc_io_ll.h"
@@ -22,9 +26,13 @@ esp_err_t io_mux_set_clock_source(soc_module_clk_t clk_src)
     return ESP_OK;
 }
 
+#ifdef __NuttX__
+extern rspinlock_t rtc_spinlock;
+static rspinlock_t __attribute__((unused)) s_io_mux_spinlock = RSPINLOCK_INITIALIZER;
+#else
 extern portMUX_TYPE rtc_spinlock;
 static portMUX_TYPE __attribute__((unused)) s_io_mux_spinlock = portMUX_INITIALIZER_UNLOCKED;
-
+#endif
 static rtc_io_status_t s_rtc_io_status = {
     .rtc_io_enabled_cnt = { 0 },
     .rtc_io_using_mask = 0

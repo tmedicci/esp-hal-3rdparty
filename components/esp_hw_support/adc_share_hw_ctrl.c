@@ -22,7 +22,11 @@
 #include "sys/lock.h"
 #include "esp_log.h"
 #include "esp_check.h"
+#ifdef __NuttX__
+#include <nuttx/spinlock.h>
+#else
 #include "freertos/FreeRTOS.h"
+#endif
 #include "hal/adc_types.h"
 #include "hal/adc_hal_common.h"
 #include "hal/adc_ll.h"
@@ -38,10 +42,12 @@
 #include "esp_efuse_rtc_calib.h"
 #endif
 
-
 ESP_LOG_ATTR_TAG(TAG, "adc_share_hw_ctrl");
+#ifdef __NuttX__
+extern rspinlock_t rtc_spinlock;
+#else
 extern portMUX_TYPE rtc_spinlock;
-
+#endif
 
 #if SOC_ADC_CALIBRATION_V1_SUPPORTED
 /*---------------------------------------------------------------
@@ -194,7 +200,11 @@ esp_err_t adc2_wifi_release(void)
     return ESP_OK;
 }
 
+#ifdef __NuttX__
+static rspinlock_t __attribute__((unused)) s_spinlock = RSPINLOCK_INITIALIZER;
+#else
 static portMUX_TYPE __attribute__((unused)) s_spinlock = portMUX_INITIALIZER_UNLOCKED;
+#endif
 
 /*------------------------------------------------------------------------------
 * For those who use APB_SARADC periph

@@ -13,19 +13,24 @@
 #include <limits.h>
 #include <assert.h>
 #include "sdkconfig.h"
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#endif
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_memory_utils.h"
 #include "esp_intr_alloc.h"
 #include "esp_attr.h"
 #include "esp_cpu.h"
+#include "esp_heap_caps.h"
 #include "esp_private/rtc_ctrl.h"
 #include "esp_private/critical_section.h"
+#include "esp_private/mem.h"
 #include "soc/interrupts.h"
 #include "soc/soc_caps.h"
 #include "sdkconfig.h"
+#include "platform/os.h"
 
 #if !CONFIG_FREERTOS_UNICORE
 #include "esp_ipc.h"
@@ -126,7 +131,11 @@ static uint32_t non_iram_int_mask[SOC_CPU_CORES_NUM];
 static uint32_t non_iram_int_disabled[SOC_CPU_CORES_NUM];
 static bool non_iram_int_disabled_flag[SOC_CPU_CORES_NUM];
 
+#ifdef __NuttX__
+static rspinlock_t __attribute__((unused)) spinlock = RSPINLOCK_INITIALIZER;
+#else
 static portMUX_TYPE __attribute__((unused)) spinlock = portMUX_INITIALIZER_UNLOCKED;
+#endif
 
 //Inserts an item into vector_desc list so that the list is sorted
 //with an incrementing cpu.intno value.
@@ -166,11 +175,11 @@ static vector_desc_t *find_desc_for_int(int intno, int cpu)
 //Returns a vector_desc entry for an intno/cpu.
 //Either returns a preexisting one or allocates a new one and inserts
 //it into the list. Returns NULL on malloc fail.
-static vector_desc_t *get_desc_for_int(int intno, int cpu)
+vector_desc_t *get_desc_for_int(int intno, int cpu)
 {
     vector_desc_t *vd = find_desc_for_int(intno, cpu);
     if (vd == NULL) {
-        vector_desc_t *newvd = heap_caps_malloc(sizeof(vector_desc_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+        vector_desc_t *newvd = esp_os_malloc_with_caps(sizeof(vector_desc_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
         if (newvd == NULL) {
             return NULL;
         }
@@ -572,7 +581,7 @@ esp_err_t esp_intr_alloc_intrstatus_bind(int source, int flags, uint32_t intrsta
     }
 
     //Allocate a return handle. If we end up not needing it, we'll free it later on.
-    ret = heap_caps_malloc(sizeof(intr_handle_data_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    ret = esp_os_malloc_with_caps(sizeof(intr_handle_data_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     if (ret == NULL) {
         return ESP_ERR_NO_MEM;
     }
@@ -609,7 +618,7 @@ esp_err_t esp_intr_alloc_intrstatus_bind(int source, int flags, uint32_t intrsta
     //Allocate that int!
     if (flags & ESP_INTR_FLAG_SHARED) {
         //Populate vector entry and add to linked list.
-        shared_vector_desc_t *sh_vec = heap_caps_malloc(sizeof(shared_vector_desc_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+        shared_vector_desc_t *sh_vec = esp_os_malloc_with_caps(sizeof(shared_vector_desc_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
         if (sh_vec == NULL) {
             esp_os_exit_critical(&spinlock);
             free(ret);
@@ -632,7 +641,7 @@ esp_err_t esp_intr_alloc_intrstatus_bind(int source, int flags, uint32_t intrsta
         vd->flags = VECDESC_FL_NONSHARED;
         if (handler) {
 #if CONFIG_ESP_TRACE_ENABLE
-            non_shared_isr_arg_t *ns_isr_arg = heap_caps_malloc(sizeof(non_shared_isr_arg_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+            non_shared_isr_arg_t *ns_isr_arg = esp_os_malloc_with_caps(sizeof(non_shared_isr_arg_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
             if (!ns_isr_arg) {
                 esp_os_exit_critical(&spinlock);
                 free(ret);
@@ -988,6 +997,17 @@ void ESP_INTR_IRAM_ATTR esp_intr_noniram_enable(void)
     esp_cpu_intr_enable(non_iram_ints);
     rtc_isr_noniram_enable(cpu);
     esp_os_exit_critical_safe(&spinlock);
+}
+
+bool ESP_INTR_IRAM_ATTR esp_intr_noniram_is_disabled(uint32_t cpu)
+{
+    if (cpu >= SOC_CPU_CORES_NUM) {
+        return false;
+    }
+    esp_os_enter_critical_safe(&spinlock);
+    bool disabled = non_iram_int_disabled_flag[cpu];
+    esp_os_exit_critical_safe(&spinlock);
+    return disabled;
 }
 
 //These functions are provided in ROM, but the ROM-based functions use non-multicore-capable

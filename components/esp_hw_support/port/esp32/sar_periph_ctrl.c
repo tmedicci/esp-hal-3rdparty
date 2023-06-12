@@ -16,7 +16,6 @@
 
 #include "sdkconfig.h"
 #include "esp_log.h"
-#include "freertos/FreeRTOS.h"
 #include "esp_private/sar_periph_ctrl.h"
 #include "esp_private/critical_section.h"
 #include "esp_private/adc_share_hw_ctrl.h"
@@ -24,8 +23,12 @@
 #include "hal/adc_ll.h"
 
 ESP_LOG_ATTR_TAG(TAG, "sar_periph_ctrl");
-extern portMUX_TYPE rtc_spinlock;
 
+#ifdef __NuttX__
+extern rspinlock_t rtc_spinlock;
+#else
+extern portMUX_TYPE rtc_spinlock;
+#endif
 
 void sar_periph_ctrl_init(void)
 {

@@ -7,15 +7,21 @@
 
 #include "esp_attr.h"
 #include <stdint.h>
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#endif
 #include "hal/regi2c_ctrl.h"
 #include "hal/regi2c_ctrl_ll.h"
 #include "esp_hw_log.h"
 #include "soc/soc_caps.h"
 #include "esp_private/critical_section.h"
 
-static portMUX_TYPE __attribute__((unused)) mux = portMUX_INITIALIZER_UNLOCKED;
+#ifdef __NuttX__
+static rspinlock_t mux = RSPINLOCK_INITIALIZER;
+#else
+static portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+#endif
 
 ESP_HW_LOG_ATTR_TAG_DRAM(TAG, "REGI2C");
 

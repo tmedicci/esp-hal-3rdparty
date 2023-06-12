@@ -15,6 +15,7 @@
 #include "esp_macros.h"
 #include "esp_memory_utils.h"
 #include "esp_sleep.h"
+#include "esp_private/critical_section.h"
 #include "esp_private/esp_clk_tree_common.h"
 #include "esp_private/esp_clk_utils.h"
 #include "esp_private/esp_sleep_internal.h"
@@ -27,11 +28,15 @@
 #include "esp_private/io_mux.h"
 #include "esp_private/critical_section.h"
 #include "esp_log.h"
+#ifndef __NuttX__
 #include "esp_newlib.h"
+#endif
 #include "esp_timer.h"
 #include "esp_ipc_isr.h"
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#endif
 #include "soc/soc_caps.h"
 #include "soc/spi_pins.h"
 #include "soc/chip_revision.h"
@@ -40,6 +45,10 @@
 #include "hal/efuse_hal.h"
 #include "hal/rtc_io_hal.h"
 #include "hal/clk_tree_hal.h"
+
+#ifdef __NuttX__
+#include "esp_time_impl.h"
+#endif
 
 #if SOC_SLEEP_SYSTIMER_STALL_WORKAROUND
 #include "hal/systimer_ll.h"
@@ -88,12 +97,16 @@
 #ifdef CONFIG_IDF_TARGET_ESP32
 #include "esp32/rom/cache.h"
 #include "esp32/rom/rtc.h"
+#ifndef __NuttX__
 #include "esp_private/gpio.h"
+#endif
 #include "esp_private/sleep_gpio.h"
 #elif CONFIG_IDF_TARGET_ESP32S2
 #include "esp32s2/rom/rtc.h"
 #include "soc/extmem_reg.h"
+#ifndef __NuttX__
 #include "esp_private/gpio.h"
+#endif
 #elif CONFIG_IDF_TARGET_ESP32S3
 #include "esp32s3/rom/rtc.h"
 #elif CONFIG_IDF_TARGET_ESP32C3
@@ -262,7 +275,7 @@ typedef struct {
 #if SOC_PM_SUPPORT_PMU_CLK_ICG
     int16_t clock_icg_refs[ESP_SLEEP_CLOCK_MAX];
 #endif
-    portMUX_TYPE lock;
+    DECLARE_CRIT_SECTION_LOCK_IN_STRUCT(lock);
     uint64_t sleep_duration;
     uint32_t wakeup_triggers : 20;
 #if SOC_PM_SUPPORT_EXT1_WAKEUP
@@ -315,7 +328,7 @@ static sleep_config_t s_config = {
 #if SOC_PM_SUPPORT_PMU_CLK_ICG
     .clock_icg_refs[0 ... ESP_SLEEP_CLOCK_MAX - 1] = 0,
 #endif
-    .lock = portMUX_INITIALIZER_UNLOCKED,
+    INIT_CRIT_SECTION_LOCK_IN_STRUCT(lock)
     .ccount_ticks_record = 0,
     .sleep_time_overhead_out = DEFAULT_SLEEP_OUT_OVERHEAD_US,
     .wakeup_triggers = 0,
@@ -328,7 +341,7 @@ static bool s_light_sleep_wakeup = false;
 
 /* Updating RTC_MEMORY_CRC_REG register via set_rtc_memory_crc()
    is not thread-safe, so we need to disable interrupts before going to deep sleep. */
-static portMUX_TYPE __attribute__((unused)) spinlock_rtc_deep_sleep = portMUX_INITIALIZER_UNLOCKED;
+DEFINE_CRIT_SECTION_LOCK_STATIC(spinlock_rtc_deep_sleep);
 
 ESP_LOG_ATTR_TAG(TAG, "sleep");
 

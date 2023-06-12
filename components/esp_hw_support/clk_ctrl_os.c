@@ -4,7 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#ifdef __NuttX__
+#include <nuttx/spinlock.h>
+#include "esp_attr.h"
+#else
 #include <freertos/FreeRTOS.h>
+#endif
+
 #include "clk_ctrl_os.h"
 #include "soc/rtc.h"
 #include "esp_ldo_regulator.h"
@@ -21,7 +27,11 @@
 ESP_LOG_ATTR_TAG(TAG, "clk_ctrl_os");
 #endif
 
+#ifdef __NuttX__
+static rspinlock_t __attribute__((unused)) periph_spinlock = RSPINLOCK_INITIALIZER;
+#else
 static portMUX_TYPE __attribute__((unused)) periph_spinlock = portMUX_INITIALIZER_UNLOCKED;
+#endif
 
 static uint8_t s_periph_ref_counts = 0;
 static uint32_t s_rc_fast_freq_hz = 0; // Frequency of the RC_FAST clock in Hz

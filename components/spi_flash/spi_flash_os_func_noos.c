@@ -15,6 +15,11 @@
 #include "hal/cache_ll.h"
 #include "soc/soc_caps.h"
 
+#ifdef __NuttX__
+#  include <nuttx/init.h>
+#  include "esp_irq.h"
+#endif // __NuttX__
+
 static IRAM_ATTR esp_err_t start(void *arg)
 {
 #if SOC_BRANCH_PREDICTOR_SUPPORTED
@@ -22,6 +27,11 @@ static IRAM_ATTR esp_err_t start(void *arg)
     esp_cpu_branch_prediction_disable();
 #endif
 
+#ifdef __NuttX__
+    if (OSINIT_OS_READY()) {
+        esp_intr_noniram_disable();
+    }
+#endif
 #if CONFIG_IDF_TARGET_ESP32
     Cache_Read_Disable(0);
     Cache_Read_Disable(1);
@@ -44,7 +54,11 @@ static IRAM_ATTR esp_err_t end(void *arg)
 #if SOC_BRANCH_PREDICTOR_SUPPORTED
     esp_cpu_branch_prediction_enable();
 #endif
-
+#ifdef __NuttX__
+    if (OSINIT_OS_READY()) {
+        esp_intr_noniram_enable();
+    }
+#endif
     return ESP_OK;
 }
 

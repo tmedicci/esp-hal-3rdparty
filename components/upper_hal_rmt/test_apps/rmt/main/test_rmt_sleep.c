@@ -27,7 +27,7 @@ typedef struct {
 
 static bool test_rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data)
 {
-    BaseType_t high_task_wakeup = pdFALSE;
+    OS_BASE_TYPE high_task_wakeup = OS_FALSE;
     test_rx_user_data_t *test_user_data = (test_rx_user_data_t *)user_data;
     rmt_symbol_word_t *remote_codes = edata->received_symbols;
     esp_rom_printf("%u symbols decoded:\r\n", edata->num_symbols);
@@ -36,7 +36,7 @@ static bool test_rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx
     }
     test_user_data->received_symbol_num = edata->num_symbols;
     vTaskNotifyGiveFromISR(test_user_data->task_to_notify, &high_task_wakeup);
-    return high_task_wakeup == pdTRUE;
+    return high_task_wakeup == OS_TRUE;
 }
 
 /**
@@ -47,7 +47,7 @@ static bool test_rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx
 static void test_rmt_tx_rx_sleep_retention(bool allow_pd)
 {
     uint32_t const test_rx_buffer_symbols = 128;
-    rmt_symbol_word_t *remote_codes = heap_caps_aligned_calloc(64, test_rx_buffer_symbols, sizeof(rmt_symbol_word_t),
+    rmt_symbol_word_t *remote_codes = esp_os_aligned_calloc_with_caps(64, test_rx_buffer_symbols, sizeof(rmt_symbol_word_t),
                                                                MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
     TEST_ASSERT_NOT_NULL(remote_codes);
 
@@ -128,7 +128,7 @@ static void test_rmt_tx_rx_sleep_retention(bool allow_pd)
     TEST_ESP_OK(rmt_transmit(tx_channel, nec_encoder, (uint16_t[]) {
         0x0440, 0x3003 // address, command
     }, 4, &transmit_config));
-    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(1000)));
+    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(OS_FALSE, pdMS_TO_TICKS(1000)));
     TEST_ASSERT_EQUAL(34, test_user_data.received_symbol_num);
 
     printf("uninstall the RMT driver\r\n");

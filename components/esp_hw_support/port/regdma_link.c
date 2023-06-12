@@ -13,12 +13,19 @@
 #include "sdkconfig.h"
 #include "esp_private/regdma_link.h"
 
+#ifndef __NuttX__
 #include "esp_heap_caps.h"
+#endif
 #include "esp_log.h"
 #include "esp_regdma.h"
 #include "esp_compiler.h"
 
 
+#ifdef __NuttX__
+#include <nuttx/kmalloc.h>
+#include "esp_irq.h"
+#define heap_caps_aligned_alloc(n, s, c)  kmm_calloc(n, s)
+#endif
 
 #define REGDMA_LINK_ADDR_ALIGN      (4)
 #if CONFIG_IDF_TARGET_ESP32P4

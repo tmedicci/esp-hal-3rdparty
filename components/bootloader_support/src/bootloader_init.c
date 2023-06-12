@@ -21,8 +21,9 @@
 #include "hal/efuse_hal.h"
 #include "hal/cache_hal.h"
 #include "hal/mmu_hal.h"
+#ifndef __NuttX__
 #include "esp_bootloader_desc.h"
-#include "esp_rom_sys.h"
+#endif
 
 ESP_LOG_ATTR_TAG(TAG, "boot");
 
@@ -108,6 +109,7 @@ void bootloader_enable_random(void)
     bootloader_random_enable();
 }
 
+#if !defined(__NuttX__) && !defined(CONFIG_ESPRESSIF_BOOTLOADER_MCUBOOT)
 void bootloader_print_banner(void)
 {
     if (CONFIG_BOOTLOADER_LOG_LEVEL >= ESP_LOG_INFO) {
@@ -126,6 +128,7 @@ void bootloader_print_banner(void)
     ESP_EARLY_LOGI(TAG, "Multicore bootloader");
 #endif
 }
+#endif
 
 void bootloader_init_ext_mem(void)
 {

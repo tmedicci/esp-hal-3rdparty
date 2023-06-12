@@ -19,7 +19,7 @@ BITSCRAMBLER_PROGRAM(bitscrambler_program_test_tx, "test_tx");
 
 IRAM_ATTR static bool test_rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data)
 {
-    BaseType_t high_task_wakeup = pdFALSE;
+    OS_BASE_TYPE high_task_wakeup = OS_FALSE;
     TaskHandle_t task_to_notify = (TaskHandle_t)user_data;
 
     const rmt_symbol_word_t expected_symbols[] = {
@@ -37,7 +37,7 @@ IRAM_ATTR static bool test_rmt_rx_done_callback(rmt_channel_handle_t channel, co
     TEST_ASSERT_EQUAL_INT_ARRAY(expected_symbols, remote_codes, sizeof(expected_symbols) / sizeof(rmt_symbol_word_t));
 
     vTaskNotifyGiveFromISR(task_to_notify, &high_task_wakeup);
-    return high_task_wakeup == pdTRUE;
+    return high_task_wakeup == OS_TRUE;
 }
 
 TEST_CASE("rmt TX with bitscrambler", "[rmt]")
@@ -95,14 +95,14 @@ TEST_CASE("rmt TX with bitscrambler", "[rmt]")
     TEST_ESP_OK(rmt_transmit(tx_channel, bs_encoder, (uint8_t[]) {
         0x12, 0x34, 0x56, 0x78, 0x9a, // dummy test values, will be further processed by bitscrambler program
     }, 5, &transmit_config));
-    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(1000)));
+    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(OS_FALSE, pdMS_TO_TICKS(1000)));
 
     TEST_ESP_OK(rmt_receive(rx_channel, symbols, sizeof(symbols), &receive_config));
     printf("transmit again!\r\n");
     TEST_ESP_OK(rmt_transmit(tx_channel, bs_encoder, (uint8_t[]) {
         0x12, 0x34, 0x56, 0x78, 0x9a, // dummy test values, will be further processed by bitscrambler program
     }, 5, &transmit_config));
-    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(1000)));
+    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(OS_FALSE, pdMS_TO_TICKS(1000)));
 
     printf("disable tx+rx channel\r\n");
     TEST_ESP_OK(rmt_disable(tx_channel));

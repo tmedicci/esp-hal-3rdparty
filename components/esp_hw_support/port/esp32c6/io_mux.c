@@ -6,7 +6,11 @@
 
 #include "sdkconfig.h"
 #include "esp_attr.h"
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
+#else
+#include "spinlock.h"
+#endif
 #include "esp_private/io_mux.h"
 #include "esp_private/periph_ctrl.h"
 #include "esp_private/critical_section.h"
@@ -15,7 +19,11 @@
 
 #define RTCIO_RCC_ATOMIC()  PERIPH_RCC_ATOMIC()
 
+#ifndef __NuttX__
 static portMUX_TYPE __attribute__((unused)) s_io_mux_spinlock = portMUX_INITIALIZER_UNLOCKED;
+#else
+static rspinlock_t __attribute__((unused)) s_io_mux_spinlock = RSPINLOCK_INITIALIZER;
+#endif
 static soc_module_clk_t s_io_mux_clk_src = 0; // by default, the clock source is not set explicitly by any consumer (e.g. SDM, Filter)
 
 #if CONFIG_ULP_COPROC_ENABLED

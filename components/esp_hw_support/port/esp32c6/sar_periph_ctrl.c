@@ -17,7 +17,9 @@
 #include <sys/lock.h>
 #include "sdkconfig.h"
 #include "esp_log.h"
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
+#endif
 #include "esp_private/sar_periph_ctrl.h"
 #include "esp_private/regi2c_ctrl.h"
 #include "esp_private/esp_modem_clock.h"
@@ -28,9 +30,12 @@
 #include "hal/temperature_sensor_ll.h"
 
 ESP_LOG_ATTR_TAG(TAG, "sar_periph_ctrl");
+#ifdef __NuttX__
+extern rspinlock_t rtc_spinlock;
+#else
 extern portMUX_TYPE rtc_spinlock;
+#endif
 static _lock_t adc_reset_lock;
-
 
 void sar_periph_ctrl_init(void)
 {
