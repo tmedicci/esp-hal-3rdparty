@@ -67,10 +67,29 @@ static void wdt_reset_info_dump(int cpu)
 
     if (DPORT_RECORD_PDEBUGINST_SZ(inst) == 0 &&
             DPORT_RECORD_PDEBUGSTATUS_BBCAUSE(dstat) == DPORT_RECORD_PDEBUGSTATUS_BBCAUSE_WAITI) {
+#ifdef __NuttX__
+        ESP_EARLY_LOGW(TAG, "WDT reset info: %s CPU PC=0x%"PRIx32" (waiti mode)", cpu_name, pc);
+#else
         ESP_LOGW(TAG, "WDT reset info: %s CPU PC=0x%"PRIx32" (waiti mode)", cpu_name, pc);
+#endif
     } else {
+#ifdef __NuttX__
+        ESP_EARLY_LOGW(TAG, "WDT reset info: %s CPU PC=0x%"PRIx32, cpu_name, pc);
+#else
         ESP_LOGW(TAG, "WDT reset info: %s CPU PC=0x%"PRIx32, cpu_name, pc);
+#endif
     }
+#ifdef __NuttX__
+    ESP_EARLY_LOGD(TAG, "WDT reset info: %s CPU STATUS        0x%08"PRIx32, cpu_name, stat);
+    ESP_EARLY_LOGD(TAG, "WDT reset info: %s CPU PID           0x%08"PRIx32, cpu_name, pid);
+    ESP_EARLY_LOGD(TAG, "WDT reset info: %s CPU PDEBUGINST    0x%08"PRIx32, cpu_name, inst);
+    ESP_EARLY_LOGD(TAG, "WDT reset info: %s CPU PDEBUGSTATUS  0x%08"PRIx32, cpu_name, dstat);
+    ESP_EARLY_LOGD(TAG, "WDT reset info: %s CPU PDEBUGDATA    0x%08"PRIx32, cpu_name, data);
+    ESP_EARLY_LOGD(TAG, "WDT reset info: %s CPU PDEBUGPC      0x%08"PRIx32, cpu_name, pc);
+    ESP_EARLY_LOGD(TAG, "WDT reset info: %s CPU PDEBUGLS0STAT 0x%08"PRIx32, cpu_name, lsstat);
+    ESP_EARLY_LOGD(TAG, "WDT reset info: %s CPU PDEBUGLS0ADDR 0x%08"PRIx32, cpu_name, lsaddr);
+    ESP_EARLY_LOGD(TAG, "WDT reset info: %s CPU PDEBUGLS0DATA 0x%08"PRIx32, cpu_name, lsdata);
+#else
     ESP_LOGD(TAG, "WDT reset info: %s CPU STATUS        0x%08"PRIx32, cpu_name, stat);
     ESP_LOGD(TAG, "WDT reset info: %s CPU PID           0x%08"PRIx32, cpu_name, pid);
     ESP_LOGD(TAG, "WDT reset info: %s CPU PDEBUGINST    0x%08"PRIx32, cpu_name, inst);
@@ -80,6 +99,7 @@ static void wdt_reset_info_dump(int cpu)
     ESP_LOGD(TAG, "WDT reset info: %s CPU PDEBUGLS0STAT 0x%08"PRIx32, cpu_name, lsstat);
     ESP_LOGD(TAG, "WDT reset info: %s CPU PDEBUGLS0ADDR 0x%08"PRIx32, cpu_name, lsaddr);
     ESP_LOGD(TAG, "WDT reset info: %s CPU PDEBUGLS0DATA 0x%08"PRIx32, cpu_name, lsdata);
+#endif
 }
 
 static void bootloader_check_wdt_reset(void)
@@ -88,7 +108,11 @@ static void bootloader_check_wdt_reset(void)
     soc_reset_reason_t rst_reason = esp_rom_get_reset_reason(0);
     if (rst_reason == RESET_REASON_CORE_RTC_WDT || rst_reason == RESET_REASON_CORE_MWDT0 || rst_reason == RESET_REASON_CORE_MWDT1 ||
         rst_reason == RESET_REASON_CPU0_MWDT0 || rst_reason == RESET_REASON_CPU0_MWDT1 || rst_reason == RESET_REASON_CPU0_RTC_WDT) {
+#ifdef __NuttX__
+        ESP_EARLY_LOGW(TAG, "PRO CPU has been reset by WDT.");
+#else
         ESP_LOGW(TAG, "PRO CPU has been reset by WDT.");
+#endif
         wdt_rst = 1;
     }
     if (wdt_rst) {
@@ -150,7 +174,11 @@ esp_err_t bootloader_init(void)
     bootloader_flash_update_id();
     // Check and run XMC startup flow
     if ((ret = bootloader_flash_xmc_startup()) != ESP_OK) {
+#ifdef __NuttX__
+        ESP_EARLY_LOGE(TAG, "failed when running XMC startup flow, reboot!");
+#else
         ESP_LOGE(TAG, "failed when running XMC startup flow, reboot!");
+#endif
         return ret;
     }
     // read bootloader header
