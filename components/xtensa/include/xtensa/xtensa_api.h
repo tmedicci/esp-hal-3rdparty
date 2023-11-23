@@ -32,7 +32,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <xtensa/hal.h>
 #include "xtensa_context.h"
 
-
 /* Typedef for C-callable interrupt handler function */
 typedef void (*xt_handler)(void *);
 
