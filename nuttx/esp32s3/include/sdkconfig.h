@@ -365,13 +365,22 @@
 #define CONFIG_ESP_ROM_NEEDS_SET_CACHE_MMU_SIZE 1
 #define CONFIG_ESP_ROM_RAM_APP_NEEDS_MMU_INIT 1
 #define CONFIG_BOOT_ROM_LOG_ALWAYS_ON 1
-#define CONFIG_ESPTOOLPY_FLASH_MODE_AUTO_DETECT 1
-#define CONFIG_ESPTOOLPY_FLASHMODE_QIO 1
+//Set according to .config
+#define CONFIG_ESPTOOLPY_OCT_FLASH 1
+//Set according to .config
+#define CONFIG_ESPTOOLPY_FLASHMODE_OPI 1
+//Set according to .config
+//Set according to .config
 #define CONFIG_ESPTOOLPY_FLASH_SAMPLE_MODE_STR 1
-#define CONFIG_ESPTOOLPY_FLASHMODE "dio"
+//Set according to .config
+#define CONFIG_ESPTOOLPY_FLASHMODE "dout"
+//Set according to .config
 #define CONFIG_ESPTOOLPY_FLASHFREQ_80M 1
+//Set according to .config
 #define CONFIG_ESPTOOLPY_FLASHFREQ_80M_DEFAULT 1
+//Set according to .config
 #define CONFIG_ESPTOOLPY_FLASHFREQ "80m"
+//Set according to .config
 #define CONFIG_ESPTOOLPY_FLASHSIZE_2MB 1
 #define CONFIG_ESPTOOLPY_FLASHSIZE "2MB"
 #define CONFIG_ESPTOOLPY_BEFORE_RESET 1
