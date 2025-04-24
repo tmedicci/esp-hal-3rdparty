@@ -182,6 +182,7 @@ void phy_ant_clr_update_flag(void)
     s_phy_ant_need_update_flag = false;
 }
 
+#ifndef __NuttX__
 static void phy_ant_set_gpio_output(uint32_t io_num)
 {
     gpio_config_t io_conf = {};
@@ -232,6 +233,7 @@ esp_err_t esp_phy_get_ant_gpio(esp_phy_ant_gpio_config_t *config)
 
     return ESP_OK;
 }
+#endif
 
 static bool phy_ant_config_check(esp_phy_ant_config_t *config)
 {

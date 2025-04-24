@@ -15,7 +15,9 @@
 #include "soc/soc.h"
 #include "hal/spi_flash_hal.h"
 #include "hal/mspi_ll.h"
+#ifndef __NuttX__
 #include "esp_private/esp_cache_private.h"
+#endif
 #include "esp_private/mspi_timing_tuning.h"
 #include "esp_private/mspi_timing_config.h"
 #include "mspi_timing_by_mspi_delay.h"
