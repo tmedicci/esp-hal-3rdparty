@@ -11,7 +11,9 @@
 #include "esp_log.h"
 #include "esp_private/esp_gpio_reserve.h"
 #include "soc/gpio_sig_map.h"
+#ifndef __NuttX__
 #include "driver/gpio.h"
+#endif
 #include "esp_rom_gpio.h"
 #include "esp_phy_init.h"
 #include "esp_private/phy.h"

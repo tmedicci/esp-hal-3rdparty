@@ -15,6 +15,7 @@
 #if !NON_OS_BUILD
 #include "freertos/FreeRTOS.h"
 #endif
+#endif
 
 #include "esp_attr.h"
 #include "soc/rtc.h"
@@ -53,7 +54,7 @@ static irqstate_t g_flags = UINT32_MAX;
 
 #if !NON_OS_BUILD
 static portMUX_TYPE s_esp_rtc_time_lock = portMUX_INITIALIZER_UNLOCKED;
-endif
+#endif
 #endif
 
 // g_ticks_us defined in ROMs for PRO and APP CPU

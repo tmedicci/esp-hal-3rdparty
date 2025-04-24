@@ -3,7 +3,9 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
+#endif
 #include "hal/clk_gate_ll.h"
 #include "esp_attr.h"
 #include "esp_private/periph_ctrl.h"
@@ -17,15 +19,12 @@
 #endif
 
 #ifdef __NuttX__
+
 #include <nuttx/mutex.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/irq.h>
 #include <nuttx/queue.h>
-#else
-#include "freertos/FreeRTOS.h"
-#endif
 
-#ifdef __NuttX__
 #define NR_IRQSTATE_FLAGS   3
 
 #define ENTER_CRITICAL_SECTION(lock) do { \
@@ -64,22 +63,6 @@ static sq_queue_t g_periph_ctrl_int_flags_free;
 static sq_queue_t g_periph_ctrl_int_flags_used;
 static struct irqstate_list_s g_periph_ctrl_int_flags[NR_IRQSTATE_FLAGS];
 static spinlock_t periph_spinlock;
-#else
-#define ENTER_CRITICAL_SECTION(lock)    portENTER_CRITICAL_SAFE(lock)
-#define LEAVE_CRITICAL_SECTION(lock)    portEXIT_CRITICAL_SAFE(lock)
-
-#ifdef __NuttX__
-#include <nuttx/spinlock.h>
-#else
-#include "freertos/FreeRTOS.h"
-#endif
-
-#ifdef __NuttX__
-#define ENTER_CRITICAL_SECTION(lock)    do { g_flags = spin_lock_irqsave(lock); } while(0)
-#define LEAVE_CRITICAL_SECTION(lock)    spin_unlock_irqrestore((lock), g_flags)
-
-static spinlock_t periph_spinlock;
-static irqstate_t g_flags;
 #else
 #define ENTER_CRITICAL_SECTION(lock)    portENTER_CRITICAL_SAFE(lock)
 #define LEAVE_CRITICAL_SECTION(lock)    portEXIT_CRITICAL_SAFE(lock)
@@ -135,6 +118,7 @@ void periph_module_enable(periph_module_t periph)
     }
     ref_counts[periph]++;
     LEAVE_CRITICAL_SECTION(&periph_spinlock);
+#endif
 }
 
 void periph_module_disable(periph_module_t periph)
@@ -147,6 +131,7 @@ void periph_module_disable(periph_module_t periph)
         periph_ll_disable_clk_set_rst(periph);
     }
     LEAVE_CRITICAL_SECTION(&periph_spinlock);
+#endif
 }
 
 void periph_module_reset(periph_module_t periph)
@@ -156,6 +141,7 @@ void periph_module_reset(periph_module_t periph)
     ENTER_CRITICAL_SECTION(&periph_spinlock);
     periph_ll_reset(periph);
     LEAVE_CRITICAL_SECTION(&periph_spinlock);
+#endif
 }
 
 #if !SOC_IEEE802154_BLE_ONLY
