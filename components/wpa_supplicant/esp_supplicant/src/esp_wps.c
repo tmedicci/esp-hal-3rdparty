@@ -1081,7 +1081,11 @@ int wps_sm_rx_eapol_internal(u8 *src_addr, u8 *buf, u32 len)
             tmp = (u8 *)(ehdr + 1) + 1;
             ret = wps_process_wps_mX_req(tmp, plen - sizeof(*ehdr) - 1, &res);
             if (res == WPS_FRAGMENT) {
+#ifdef __NuttX__
+                wpa_printf(MSG_DEBUG, "wps frag, silently exit");
+#else
                 wpa_printf(MSG_DEBUG, "wps frag, silently exit", res);
+#endif
                 ret = ESP_OK;
                 break;
             }

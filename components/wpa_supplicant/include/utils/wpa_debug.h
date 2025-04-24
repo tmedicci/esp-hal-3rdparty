@@ -22,7 +22,7 @@
 #include "supplicant_opt.h"
 
 #ifdef __NuttX__
-enum { MSG_MSGDUMP, MSG_DEBUG, MSG_INFO, MSG_WARNING, MSG_ERROR };
+enum { MSG_EXCESSIVE, MSG_MSGDUMP, MSG_DEBUG, MSG_INFO, MSG_WARNING, MSG_ERROR };
 #else
 #ifdef ESPRESSIF_USE
 

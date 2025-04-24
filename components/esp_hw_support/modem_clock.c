@@ -462,7 +462,6 @@ void modem_clock_select_lp_clock_source(periph_module_t module, modem_clock_lpcl
 #if SOC_LIGHT_SLEEP_SUPPORTED
     /* The power domain of the low-power clock source required by the modem
      * module remains powered on during sleep */
-#if 0
     esp_sleep_pd_domain_t pd_domain = (esp_sleep_pd_domain_t) (
               (last_src == MODEM_CLOCK_LPCLK_SRC_RC_FAST)  ? ESP_PD_DOMAIN_RC_FAST  :
               (last_src == MODEM_CLOCK_LPCLK_SRC_MAIN_XTAL) ? ESP_PD_DOMAIN_XTAL    :

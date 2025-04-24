@@ -31,9 +31,15 @@
 [submodule "components/bt/controller/lib_esp32c2/esp32c2-bt-lib"]
 	path = components/bt/controller/lib_esp32c2/esp32c2-bt-lib
 	url = ../../espressif/esp32c2-bt-lib.git
+[submodule "components/bt/controller/lib_esp32c5/esp32c5-bt-lib"]
+	path = components/bt/controller/lib_esp32c5/esp32c5-bt-lib
+	url = ../../espressif/esp32c5-bt-lib.git
 [submodule "components/bt/controller/lib_esp32c6/esp32c6-bt-lib"]
 	path = components/bt/controller/lib_esp32c6/esp32c6-bt-lib
 	url = ../../espressif/esp32c6-bt-lib.git
 [submodule "components/esp_coex/lib"]
 	path = components/esp_coex/lib
 	url = ../../espressif/esp-coex-lib.git
+[submodule "components/bt/esp_ble_mesh/lib/lib"]
+	path = components/bt/esp_ble_mesh/lib/lib
+	url = ../../espressif/esp-ble-mesh-lib.git

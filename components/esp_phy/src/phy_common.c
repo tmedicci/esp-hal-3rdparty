@@ -11,7 +11,9 @@
 #include "esp_log.h"
 #include "esp_private/esp_gpio_reserve.h"
 #include "soc/gpio_sig_map.h"
+#ifndef __NuttX__
 #include "driver/gpio.h"
+#endif
 #include "esp_rom_gpio.h"
 #include "esp_phy_init.h"
 #include "esp_private/phy.h"
@@ -180,6 +182,7 @@ void phy_ant_clr_update_flag(void)
     s_phy_ant_need_update_flag = false;
 }
 
+#ifndef __NuttX__
 static void phy_ant_set_gpio_output(uint32_t io_num)
 {
     gpio_config_t io_conf = {};
@@ -230,6 +233,7 @@ esp_err_t esp_phy_get_ant_gpio(esp_phy_ant_gpio_config_t *config)
 
     return ESP_OK;
 }
+#endif
 
 static bool phy_ant_config_check(esp_phy_ant_config_t *config)
 {

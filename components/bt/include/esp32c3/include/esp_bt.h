@@ -601,6 +601,8 @@ typedef enum {
     ESP_PWR_LVL_INVALID = 0xFF,       /*!< Indicates an invalid value */
 } esp_power_level_t;
 
+#ifndef __NuttX__
+
 /**
  * @brief       Initialize the Bluetooth Controller to allocate tasks and other resources
  *
@@ -617,9 +619,6 @@ typedef enum {
  *        - ESP_FAIL: Failure due to other reasons
  *
  */
-
-#ifndef __NuttX__
-
 esp_err_t esp_bt_controller_init(esp_bt_controller_config_t *cfg);
 
 /**
@@ -678,54 +677,16 @@ esp_bt_controller_status_t esp_bt_controller_get_status(void);
 
 #endif /* __NuttX__ */
 
-uint16_t esp_bt_get_tx_buf_num(void);
-
-/** @brief esp_vhci_host_callback
- *  used for vhci call host function to notify what host need to do
- */
-typedef struct esp_vhci_host_callback {
-    void (*notify_host_send_available)(void);               /*!< callback used to notify that the host can send packet to controller */
-    int (*notify_host_recv)(uint8_t *data, uint16_t len);   /*!< callback used to notify that the controller has a packet to send to the host*/
-} esp_vhci_host_callback_t;
-
-/** @brief esp_vhci_host_check_send_available
- *  used for check actively if the host can send packet to controller or not.
- *  @return true for ready to send, false means cannot send packet
- */
-bool esp_vhci_host_check_send_available(void);
-
-/** @brief esp_vhci_host_send_packet
- * host send packet to controller
+/**
+ * @brief Release the Controller memory as per the mode
  *
- * Should not call this function from within a critical section
- * or when the scheduler is suspended.
+ * This function releases the BSS, data and other sections of the Controller to heap. The total size is about 70 KB.
  *
- * @param data the packet point
- * @param len the packet length
- */
-void esp_vhci_host_send_packet(uint8_t *data, uint16_t len);
-
-/** @brief esp_vhci_host_register_callback
- * register the vhci reference callback
- * struct defined by vhci_host_callback structure.
- * @param callback esp_vhci_host_callback type variable
- * @return ESP_OK - success, ESP_FAIL - failed
- */
-esp_err_t esp_vhci_host_register_callback(const esp_vhci_host_callback_t *callback);
-
-/** @brief esp_bt_controller_mem_release
- * release the controller memory as per the mode
- *
- * This function releases the BSS, data and other sections of the controller to heap. The total size is about 70k bytes.
- *
- * esp_bt_controller_mem_release(mode) should be called only before esp_bt_controller_init()
- * or after esp_bt_controller_deinit().
- *
- * Note that once BT controller memory is released, the process cannot be reversed. It means you cannot use the bluetooth
- * mode which you have released by this function.
- *
- * If your firmware will later upgrade the Bluetooth controller mode (BLE -> BT Classic or disabled -> enabled)
- * then do not call this function.
+ * @note
+ *    1. This function is optional and should be called only if you want to free up memory for other components.
+ *    2. This function should only be called when the Controller is in `ESP_BT_CONTROLLER_STATUS_IDLE` status.
+ *    3. Once Bluetooth Controller memory is released, the process cannot be reversed. This means you cannot use the Bluetooth Controller mode that you have released using this function.
+ *    4. If your firmware will upgrade the Bluetooth Controller mode later (such as from disabled to enabled), then do not call this function.
  *
  * If you never intend to use Bluetooth in a current boot-up cycle, calling `esp_bt_controller_mem_release(ESP_BT_MODE_BLE)` could release the BSS and data consumed by BLE Controller to heap.
  *

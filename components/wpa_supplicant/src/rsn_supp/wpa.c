@@ -1794,8 +1794,13 @@ static void wpa_eapol_key_dump(struct wpa_sm *sm,
     u16 key_info = WPA_GET_BE16(key->key_info);
 
     wpa_printf(MSG_DEBUG, "  EAPOL-Key type=%d", key->type);
+#ifdef __NuttX__
+    wpa_printf(MSG_DEBUG, "  key_info 0x%x (ver=%" PRIu32 " keyidx=%" PRIu32 " rsvd=%" PRIu32 " %s"
+           "%s%s%s%s%s%s%s)",
+#else
     wpa_printf(MSG_DEBUG, "  key_info 0x%x (ver=%d keyidx=%d rsvd=%d %s"
            "%s%s%s%s%s%s%s)",
+#endif
            key_info, (u32)(key_info & WPA_KEY_INFO_TYPE_MASK),
            (u32)((key_info & WPA_KEY_INFO_KEY_INDEX_MASK) >>
            WPA_KEY_INFO_KEY_INDEX_SHIFT),

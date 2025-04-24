@@ -11,8 +11,9 @@
 #include "esp_private/esp_clk.h"
 #include "hal/wdt_hal.h"
 
+#ifndef __NuttX__
 #include "esp_private/spi_share_hw_ctrl.h"
-
+#endif
 #include "esp_log.h"
 #include "esp_cpu.h"
 
