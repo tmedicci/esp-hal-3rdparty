@@ -37,13 +37,15 @@
 #include "soc/soc_caps.h"
 #include "soc/spi_pins.h"
 #include "soc/chip_revision.h"
-#ifndef __NuttX__
 #include "driver/rtc_io.h"
 #include "driver/gpio.h"
-#endif
 #include "hal/efuse_hal.h"
 #include "hal/rtc_io_hal.h"
 #include "hal/clk_tree_hal.h"
+
+#ifdef __NuttX__
+#include "esp_time_impl.h"
+#endif
 
 #if SOC_SLEEP_SYSTIMER_STALL_WORKAROUND
 #include "hal/systimer_ll.h"
