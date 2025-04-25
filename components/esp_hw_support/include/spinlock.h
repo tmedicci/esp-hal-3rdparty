@@ -28,10 +28,13 @@ extern "C" {
 #define NEED_VOLATILE_MUX
 #endif
 
+#ifdef __NuttX__
+#else
 #define SPINLOCK_FREE          0xB33FFFFF
 #define SPINLOCK_WAIT_FOREVER  (-1)
 #define SPINLOCK_NO_WAIT        0
 #define SPINLOCK_INITIALIZER   {.owner = SPINLOCK_FREE,.count = 0}
+#endif
 
 #define SPINLOCK_OWNER_ID_0 0xCDCD /* Use these values to avoid 0 being a valid lock owner, same as CORE_ID_REGVAL_PRO on Xtensa */
 #define SPINLOCK_OWNER_ID_1 0xABAB /* Same as CORE_ID_REGVAL_APP on Xtensa*/

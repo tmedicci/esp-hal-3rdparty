@@ -13,8 +13,10 @@
  */
 #pragma once
 
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
 #include "spinlock.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
