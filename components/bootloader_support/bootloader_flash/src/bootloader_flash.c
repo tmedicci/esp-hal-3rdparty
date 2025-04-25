@@ -47,6 +47,7 @@
 
 #if defined(__NuttX__) && defined(CONFIG_ESPRESSIF_SIMPLE_BOOT)
 #define BOOTLOADER_BUILD 1
+#define NON_OS_BUILD 1
 #endif
 
 #if !NON_OS_BUILD

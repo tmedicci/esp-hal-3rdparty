@@ -15,11 +15,15 @@
 
 #ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
-#include "spinlock.h"
 #endif
+#include "spinlock.h"
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#ifdef __NuttX__
+static irqstate_t g_flags = UINT32_MAX;
 #endif
 
 #if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32P4
@@ -200,7 +204,11 @@ typedef spinlock_t esp_os_spinlock_t;
  * @endcode
  */
 #if OS_SPINLOCK == 1
+#ifdef __NuttX__
+#define INIT_CRIT_SECTION_LOCK_IN_STRUCT(lock_name) .lock_name = SP_UNLOCKED,
+#else
 #define INIT_CRIT_SECTION_LOCK_IN_STRUCT(lock_name) .lock_name = portMUX_INITIALIZER_UNLOCKED,
+#endif
 #else
 #define INIT_CRIT_SECTION_LOCK_IN_STRUCT(lock_name)
 #endif
@@ -228,10 +236,17 @@ typedef spinlock_t esp_os_spinlock_t;
  * esp_os_exit_critical(&my_lock);
  * @endcode
  */
+#ifdef __NuttX__
+#define esp_os_enter_critical(lock)         do { \
+            assert(g_flags == UINT32_MAX); \
+            g_flags = spin_lock_irqsave(lock); \
+        } while(0)
+#else
 #if OS_SPINLOCK == 1
 #define esp_os_enter_critical(lock)         portENTER_CRITICAL(lock)
 #else
 #define esp_os_enter_critical(lock)         vPortEnterCritical()
+#endif
 #endif
 
 /**
@@ -257,10 +272,17 @@ typedef spinlock_t esp_os_spinlock_t;
  * esp_os_exit_critical(&my_lock);
  * @endcode
  */
+#ifdef __NuttX__
+#define esp_os_exit_critical(lock)          do { \
+            spin_unlock_irqrestore((lock), g_flags); \
+            g_flags = UINT32_MAX; \
+        } while(0)
+#else
 #if OS_SPINLOCK == 1
 #define esp_os_exit_critical(lock)          portEXIT_CRITICAL(lock)
 #else
 #define esp_os_exit_critical(lock)          vPortExitCritical()
+#endif
 #endif
 
 /**
@@ -286,12 +308,18 @@ typedef spinlock_t esp_os_spinlock_t;
  * esp_os_exit_critical(&my_lock);
  * @endcode
  */
+#ifdef __NuttX__
+#define esp_os_enter_critical_isr(lock)     do { \
+            assert(g_flags == UINT32_MAX); \
+            g_flags = spin_lock_irqsave(lock); \
+        } while(0)
+#else
 #if OS_SPINLOCK == 1
 #define esp_os_enter_critical_isr(lock)     portENTER_CRITICAL_ISR(lock)
 #else
 #define esp_os_enter_critical_isr(lock)     vPortEnterCritical()
 #endif
-
+#endif
 /**
  * @brief Exit a critical section after entering from ISR.
  *
@@ -315,10 +343,17 @@ typedef spinlock_t esp_os_spinlock_t;
  * esp_os_exit_critical(&my_lock);
  * @endcode
  */
+#ifdef __NuttX__
+#define esp_os_exit_critical_isr(lock)      do { \
+            spin_unlock_irqrestore((lock), g_flags); \
+            g_flags = UINT32_MAX; \
+        } while(0)
+#else
 #if OS_SPINLOCK == 1
 #define esp_os_exit_critical_isr(lock)      portEXIT_CRITICAL_ISR(lock)
 #else
 #define esp_os_exit_critical_isr(lock)      vPortExitCritical()
+#endif
 #endif
 
 /**
@@ -345,10 +380,17 @@ typedef spinlock_t esp_os_spinlock_t;
  * esp_os_exit_critical(&my_lock);
  * @endcode
  */
+#ifdef __NuttX__
+#define esp_os_enter_critical_safe(lock)    do { \
+            assert(g_flags == UINT32_MAX); \
+            g_flags = spin_lock_irqsave(lock); \
+        } while(0)
+#else
 #if OS_SPINLOCK == 1
 #define esp_os_enter_critical_safe(lock)    portENTER_CRITICAL_SAFE(lock)
 #else
 #define esp_os_enter_critical_safe(lock)    vPortEnterCritical()
+#endif
 #endif
 
 /**
@@ -374,10 +416,17 @@ typedef spinlock_t esp_os_spinlock_t;
  * esp_os_exit_critical(&my_lock);
  * @endcode
  */
+#ifdef __NuttX__
+#define esp_os_exit_critical_safe(lock)     do { \
+            spin_unlock_irqrestore((lock), g_flags); \
+            g_flags = UINT32_MAX; \
+        } while(0)
+#else
 #if OS_SPINLOCK == 1
 #define esp_os_exit_critical_safe(lock)     portEXIT_CRITICAL_SAFE(lock)
 #else
 #define esp_os_exit_critical_safe(lock)     vPortExitCritical()
+#endif
 #endif
 
 #ifdef __cplusplus
