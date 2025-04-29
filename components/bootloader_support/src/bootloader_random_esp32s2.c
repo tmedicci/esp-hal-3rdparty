@@ -16,10 +16,12 @@
 #include "esp_private/regi2c_ctrl.h"
 #include "hal/adc_ll.h"
 
-#if !(defined(__NuttX__) && defined(CONFIG_ESPRESSIF_SIMPLE_BOOT))
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) || defined(CONFIG_ESPRESSIF_MCUBOOT)
+#define BOOTLOADER_BUILD 1
+#endif
+
 #ifndef BOOTLOADER_BUILD
 #include "esp_private/periph_ctrl.h"
-#endif
 #endif
 
 void bootloader_random_enable(void)
