@@ -13,6 +13,10 @@
 #include "esp_log.h"
 #include "soc/io_mux_reg.h"
 
+#ifdef __NuttX__
+#define BOOTLOADER_BUILD 1
+#endif
+
 #ifndef BOOTLOADER_BUILD
 #include "esp_private/periph_ctrl.h"
 #endif
