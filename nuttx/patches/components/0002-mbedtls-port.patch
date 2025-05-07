@@ -1,0 +1,276 @@
+diff --git a/components/mbedtls/port/ecdsa/ecdsa_alt.c b/components/mbedtls/port/ecdsa/ecdsa_alt.c
+index 5fca558a6ffd9f06279133bad5405399ed711184..ee28c268ce8e4cccc225400e19dc859e48b43407 100644
+--- a/components/mbedtls/port/ecdsa/ecdsa_alt.c
++++ b/components/mbedtls/port/ecdsa/ecdsa_alt.c
+@@ -743,7 +743,7 @@ int __wrap_mbedtls_ecdsa_write_signature_restartable(mbedtls_ecdsa_context *ctx,
+                                               void *p_rng,
+                                               mbedtls_ecdsa_restart_ctx *rs_ctx)
+ {
+-    signed short key_magic = ctx->MBEDTLS_PRIVATE(d).MBEDTLS_PRIVATE(s);
++    signed short key_magic = ctx->esp_MBEDTLS_PRIVATE(d).MBEDTLS_PRIVATE(s);
+ 
+     if (key_magic != ECDSA_KEY_MAGIC && key_magic != ECDSA_KEY_MAGIC_TEE) {
+         return __real_mbedtls_ecdsa_write_signature_restartable(ctx, md_alg, hash, hlen, sig, sig_size, slen, f_rng, p_rng, rs_ctx);
+@@ -767,13 +767,13 @@ int __wrap_mbedtls_ecdsa_write_signature_restartable(mbedtls_ecdsa_context *ctx,
+ #if CONFIG_MBEDTLS_HARDWARE_ECDSA_SIGN
+     if (key_magic == ECDSA_KEY_MAGIC) {
+         // Use hardware ECDSA peripheral
+-        MBEDTLS_MPI_CHK(esp_ecdsa_sign(&ctx->MBEDTLS_PRIVATE(grp), &r, &s, &ctx->MBEDTLS_PRIVATE(d), hash, hlen, k_type));
++        MBEDTLS_MPI_CHK(esp_ecdsa_sign(&ctx->esp_MBEDTLS_PRIVATE(grp), &r, &s, &ctx->esp_MBEDTLS_PRIVATE(d), hash, hlen, k_type));
+     }
+ #endif
+ #if CONFIG_MBEDTLS_TEE_SEC_STG_ECDSA_SIGN
+     if (key_magic == ECDSA_KEY_MAGIC_TEE) {
+         // Use TEE secure storage
+-        MBEDTLS_MPI_CHK(esp_ecdsa_tee_sign(&ctx->MBEDTLS_PRIVATE(grp), &r, &s, &ctx->MBEDTLS_PRIVATE(d), hash, hlen, k_type));
++        MBEDTLS_MPI_CHK(esp_ecdsa_tee_sign(&ctx->esp_MBEDTLS_PRIVATE(grp), &r, &s, &ctx->esp_MBEDTLS_PRIVATE(d), hash, hlen, k_type));
+     }
+ #endif
+ 
+@@ -968,8 +968,8 @@ int __wrap_mbedtls_ecdsa_read_signature_restartable(mbedtls_ecdsa_context *ctx,
+         goto cleanup;
+     }
+ 
+-    if ((ret = __wrap_mbedtls_ecdsa_verify_restartable(&ctx->MBEDTLS_PRIVATE(grp), hash, hlen,
+-                                                    &ctx->MBEDTLS_PRIVATE(Q), &r, &s, NULL)) != 0) {
++    if ((ret = __wrap_mbedtls_ecdsa_verify_restartable(&ctx->esp_MBEDTLS_PRIVATE(grp), hash, hlen,
++                                                    &ctx->esp_MBEDTLS_PRIVATE(Q), &r, &s, NULL)) != 0) {
+         goto cleanup;
+     }
+ 
+diff --git a/components/mbedtls/port/esp_timing.c b/components/mbedtls/port/esp_timing.c
+index 82f8a0c7f70d19b624db508f6c8c14c0f3726ab1..b29a1ac72e2d76e6d9bdc597537d814e9302b74c 100644
+--- a/components/mbedtls/port/esp_timing.c
++++ b/components/mbedtls/port/esp_timing.c
+@@ -66,11 +66,11 @@ void mbedtls_timing_set_delay( void *data, uint32_t int_ms, uint32_t fin_ms )
+ {
+     mbedtls_timing_delay_context *ctx = (mbedtls_timing_delay_context *) data;
+ 
+-    ctx->MBEDTLS_PRIVATE(int_ms) = int_ms;
+-    ctx->MBEDTLS_PRIVATE(fin_ms) = fin_ms;
++    ctx->esp_MBEDTLS_PRIVATE(int_ms) = int_ms;
++    ctx->esp_MBEDTLS_PRIVATE(fin_ms) = fin_ms;
+ 
+     if( fin_ms != 0 )
+-        (void) mbedtls_timing_get_timer( &ctx->MBEDTLS_PRIVATE(timer), 1 );
++        (void) mbedtls_timing_get_timer( &ctx->esp_MBEDTLS_PRIVATE(timer), 1 );
+ }
+ 
+ /*
+@@ -85,15 +85,15 @@ int mbedtls_timing_get_delay( void *data )
+     mbedtls_timing_delay_context *ctx = (mbedtls_timing_delay_context *) data;
+     unsigned long elapsed_ms;
+ 
+-    if( ctx->MBEDTLS_PRIVATE(fin_ms) == 0 )
++    if( ctx->esp_MBEDTLS_PRIVATE(fin_ms) == 0 )
+         return( -1 );
+ 
+-    elapsed_ms = mbedtls_timing_get_timer( &ctx->MBEDTLS_PRIVATE(timer), 0 );
++    elapsed_ms = mbedtls_timing_get_timer( &ctx->esp_MBEDTLS_PRIVATE(timer), 0 );
+ 
+-    if( elapsed_ms >= ctx->MBEDTLS_PRIVATE(fin_ms) )
++    if( elapsed_ms >= ctx->esp_MBEDTLS_PRIVATE(fin_ms) )
+         return( 2 );
+ 
+-    if( elapsed_ms >= ctx->MBEDTLS_PRIVATE(int_ms) )
++    if( elapsed_ms >= ctx->esp_MBEDTLS_PRIVATE(int_ms) )
+         return( 1 );
+ 
+     return( 0 );
+@@ -104,7 +104,7 @@ int mbedtls_timing_get_delay( void *data )
+  */
+ uint32_t mbedtls_timing_get_final_delay( const mbedtls_timing_delay_context *data )
+ {
+-    return( data->MBEDTLS_PRIVATE(fin_ms) );
++    return( data->esp_MBEDTLS_PRIVATE(fin_ms) );
+ }
+ 
+ #endif /* MBEDTLS_ESP_TIMING_C */
+diff --git a/components/wpa_supplicant/esp_supplicant/src/crypto/crypto_mbedtls-ec.c b/components/wpa_supplicant/esp_supplicant/src/crypto/crypto_mbedtls-ec.c
+index 5ee2d9bf8a1c0566bdb0395ddbee85296660bff7..4e386fb0e7884fadeaa680f819d74b3a6f74c2e4 100644
+--- a/components/wpa_supplicant/esp_supplicant/src/crypto/crypto_mbedtls-ec.c
++++ b/components/wpa_supplicant/esp_supplicant/src/crypto/crypto_mbedtls-ec.c
+@@ -843,8 +843,8 @@ int crypto_ecdsa_get_sign(unsigned char *hash,
+     if (mbedtls_ecdsa_from_keypair(ctx, mbedtls_pk_ec(*pkey)) < 0) {
+         goto fail;
+     }
+-    ret = mbedtls_ecdsa_sign(&ctx->MBEDTLS_PRIVATE(grp), (mbedtls_mpi *)r, (mbedtls_mpi *)s,
+-                             &ctx->MBEDTLS_PRIVATE(d), hash, SHA256_MAC_LEN, crypto_rng_wrapper, NULL);
++    ret = mbedtls_ecdsa_sign(&ctx->esp_MBEDTLS_PRIVATE(grp), (mbedtls_mpi *)r, (mbedtls_mpi *)s,
++                             &ctx->esp_MBEDTLS_PRIVATE(d), hash, SHA256_MAC_LEN, crypto_rng_wrapper, NULL);
+ 
+ fail:
+     mbedtls_ecdsa_free(ctx);
+@@ -1139,7 +1139,7 @@ struct crypto_ecdh * crypto_ecdh_init(int group)
+     }
+     mbedtls_ecdh_init(ctx);
+ #ifndef CONFIG_MBEDTLS_ECDH_LEGACY_CONTEXT
+-    ctx->MBEDTLS_PRIVATE(var) = MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0;
++    ctx->esp_MBEDTLS_PRIVATE(var) = MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0;
+ #endif
+ 
+     if ((mbedtls_ecp_group_load(ACCESS_ECDH(&ctx, grp), crypto_mbedtls_get_grp_id(group))) != 0) {
+@@ -1270,7 +1270,7 @@ struct wpabuf * crypto_ecdh_set_peerkey(struct crypto_ecdh *ecdh, int inc_y,
+     if (peer != NULL) {
+         mbedtls_ecp_copy(ACCESS_ECDH(&ctx, Qp), &(mbedtls_pk_ec(*peer))->MBEDTLS_PRIVATE(Q));
+ #ifndef CONFIG_MBEDTLS_ECDH_LEGACY_CONTEXT
+-        ctx->MBEDTLS_PRIVATE(var) = MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0;
++        ctx->esp_MBEDTLS_PRIVATE(var) = MBEDTLS_ECDH_VARIANT_MBEDTLS_2_0;
+ #endif
+     } else {
+         wpa_printf(MSG_ERROR, "Failed to set peer's ECDH context");
+diff --git a/components/wpa_supplicant/esp_supplicant/src/crypto/crypto_mbedtls.c b/components/wpa_supplicant/esp_supplicant/src/crypto/crypto_mbedtls.c
+index 4f0fa6ff4e6dc04bc91b6b92feabeceaab327428..d07a350d486b922766be669b39a4f52c1a3afad8 100644
+--- a/components/wpa_supplicant/esp_supplicant/src/crypto/crypto_mbedtls.c
++++ b/components/wpa_supplicant/esp_supplicant/src/crypto/crypto_mbedtls.c
+@@ -224,7 +224,7 @@ void crypto_hash_update(struct crypto_hash *crypto_ctx, const u8 *data, size_t l
+     if (ctx == NULL) {
+         return;
+     }
+-    if (ctx->MBEDTLS_PRIVATE(hmac_ctx)) {
++    if (ctx->esp_MBEDTLS_PRIVATE(hmac_ctx)) {
+         ret = mbedtls_md_hmac_update(ctx, data, len);
+     } else {
+         ret = mbedtls_md_update(ctx, data, len);
+@@ -295,7 +295,7 @@ int crypto_hash_finish(struct crypto_hash *crypto_ctx, u8 *mac, size_t *len)
+         ret = -1;
+         goto err;
+     }
+-    if (ctx->MBEDTLS_PRIVATE(hmac_ctx)) {
++    if (ctx->esp_MBEDTLS_PRIVATE(hmac_ctx)) {
+         ret = mbedtls_md_hmac_finish(ctx, mac);
+     } else {
+         ret = mbedtls_md_finish(ctx, mac);
+diff --git a/components/wpa_supplicant/esp_supplicant/src/crypto/fastpbkdf2.c b/components/wpa_supplicant/esp_supplicant/src/crypto/fastpbkdf2.c
+index f2bd0cfd3e75af9f8075a58c87ef04bbe8babc4d..42d68100c32ae20b821ef5a18e9a313301d6f53e 100644
+--- a/components/wpa_supplicant/esp_supplicant/src/crypto/fastpbkdf2.c
++++ b/components/wpa_supplicant/esp_supplicant/src/crypto/fastpbkdf2.c
+@@ -251,11 +251,11 @@ static inline void sha1_extract(mbedtls_sha1_context *restrict ctx, uint8_t *res
+     *(uint32_t *)(out + 16) = ctx->state[4];
+ #endif
+ #else
+-    write32_be(ctx->MBEDTLS_PRIVATE(state)[0], out);
+-    write32_be(ctx->MBEDTLS_PRIVATE(state)[1], out + 4);
+-    write32_be(ctx->MBEDTLS_PRIVATE(state)[2], out + 8);
+-    write32_be(ctx->MBEDTLS_PRIVATE(state)[3], out + 12);
+-    write32_be(ctx->MBEDTLS_PRIVATE(state)[4], out + 16);
++    write32_be(ctx->esp_MBEDTLS_PRIVATE(state)[0], out);
++    write32_be(ctx->esp_MBEDTLS_PRIVATE(state)[1], out + 4);
++    write32_be(ctx->esp_MBEDTLS_PRIVATE(state)[2], out + 8);
++    write32_be(ctx->esp_MBEDTLS_PRIVATE(state)[3], out + 12);
++    write32_be(ctx->esp_MBEDTLS_PRIVATE(state)[4], out + 16);
+ #endif
+ }
+ 
+@@ -315,46 +315,46 @@ static int sha1_finish(mbedtls_sha1_context *ctx,
+     /*
+      * Add padding: 0x80 then 0x00 until 8 bytes remain for the length
+      */
+-    used = ctx->MBEDTLS_PRIVATE(total)[0] & 0x3F;
++    used = ctx->esp_MBEDTLS_PRIVATE(total)[0] & 0x3F;
+ 
+-    ctx->MBEDTLS_PRIVATE(buffer)[used++] = 0x80;
++    ctx->esp_MBEDTLS_PRIVATE(buffer)[used++] = 0x80;
+ 
+     if (used <= 56) {
+         /* Enough room for padding + length in current block */
+-        memset(ctx->MBEDTLS_PRIVATE(buffer) + used, 0, 56 - used);
++        memset(ctx->esp_MBEDTLS_PRIVATE(buffer) + used, 0, 56 - used);
+     } else {
+         /* We'll need an extra block */
+-        memset(ctx->MBEDTLS_PRIVATE(buffer) + used, 0, 64 - used);
++        memset(ctx->esp_MBEDTLS_PRIVATE(buffer) + used, 0, 64 - used);
+ 
+-        if ((ret = mbedtls_internal_sha1_process(ctx, ctx->MBEDTLS_PRIVATE(buffer))) != 0) {
++        if ((ret = mbedtls_internal_sha1_process(ctx, ctx->esp_MBEDTLS_PRIVATE(buffer))) != 0) {
+             goto exit;
+         }
+ 
+-        memset(ctx->MBEDTLS_PRIVATE(buffer), 0, 56);
++        memset(ctx->esp_MBEDTLS_PRIVATE(buffer), 0, 56);
+     }
+ 
+     /*
+      * Add message length
+      */
+-    high = (ctx->MBEDTLS_PRIVATE(total)[0] >> 29)
+-           | (ctx->MBEDTLS_PRIVATE(total)[1] <<  3);
+-    low  = (ctx->MBEDTLS_PRIVATE(total)[0] <<  3);
++    high = (ctx->esp_MBEDTLS_PRIVATE(total)[0] >> 29)
++           | (ctx->esp_MBEDTLS_PRIVATE(total)[1] <<  3);
++    low  = (ctx->esp_MBEDTLS_PRIVATE(total)[0] <<  3);
+ 
+-    write32_be(high, ctx->MBEDTLS_PRIVATE(buffer) + 56);
+-    write32_be(low, ctx->MBEDTLS_PRIVATE(buffer) + 60);
++    write32_be(high, ctx->esp_MBEDTLS_PRIVATE(buffer) + 56);
++    write32_be(low, ctx->esp_MBEDTLS_PRIVATE(buffer) + 60);
+ 
+-    if ((ret = mbedtls_internal_sha1_process(ctx, ctx->MBEDTLS_PRIVATE(buffer))) != 0) {
++    if ((ret = mbedtls_internal_sha1_process(ctx, ctx->esp_MBEDTLS_PRIVATE(buffer))) != 0) {
+         goto exit;
+     }
+ 
+     /*
+      * Output final state
+      */
+-    write32_be(ctx->MBEDTLS_PRIVATE(state)[0], output);
+-    write32_be(ctx->MBEDTLS_PRIVATE(state)[1], output + 4);
+-    write32_be(ctx->MBEDTLS_PRIVATE(state)[2], output + 8);
+-    write32_be(ctx->MBEDTLS_PRIVATE(state)[3], output + 12);
+-    write32_be(ctx->MBEDTLS_PRIVATE(state)[4], output + 16);
++    write32_be(ctx->esp_MBEDTLS_PRIVATE(state)[0], output);
++    write32_be(ctx->esp_MBEDTLS_PRIVATE(state)[1], output + 4);
++    write32_be(ctx->esp_MBEDTLS_PRIVATE(state)[2], output + 8);
++    write32_be(ctx->esp_MBEDTLS_PRIVATE(state)[3], output + 12);
++    write32_be(ctx->esp_MBEDTLS_PRIVATE(state)[4], output + 16);
+ 
+     ret = 0;
+ 
+-diff --git a/components/mbedtls/port/esp_timing.c b/components/mbedtls/port/esp_timing.c
+-index 82f8a0c7f70d19b624db508f6c8c14c0f3726ab1..b29a1ac72e2d76e6d9bdc597537d814e9302b74c 100644
+---- a/components/mbedtls/port/esp_timing.c
+-+++ b/components/mbedtls/port/esp_timing.c
+-@@ -66,11 +66,11 @@ void mbedtls_timing_set_delay( void *data, uint32_t int_ms, uint32_t fin_ms )
+- {
+-     mbedtls_timing_delay_context *ctx = (mbedtls_timing_delay_context *) data;
+- 
+--    ctx->MBEDTLS_PRIVATE(int_ms) = int_ms;
+--    ctx->MBEDTLS_PRIVATE(fin_ms) = fin_ms;
+-+    ctx->esp_MBEDTLS_PRIVATE(int_ms) = int_ms;
+-+    ctx->esp_MBEDTLS_PRIVATE(fin_ms) = fin_ms;
+- 
+-     if( fin_ms != 0 )
+--        (void) mbedtls_timing_get_timer( &ctx->MBEDTLS_PRIVATE(timer), 1 );
+-+        (void) mbedtls_timing_get_timer( &ctx->esp_MBEDTLS_PRIVATE(timer), 1 );
+- }
+- 
+- /*
+-@@ -85,15 +85,15 @@ int mbedtls_timing_get_delay( void *data )
+-     mbedtls_timing_delay_context *ctx = (mbedtls_timing_delay_context *) data;
+-     unsigned long elapsed_ms;
+- 
+--    if( ctx->MBEDTLS_PRIVATE(fin_ms) == 0 )
+-+    if( ctx->esp_MBEDTLS_PRIVATE(fin_ms) == 0 )
+-         return( -1 );
+- 
+--    elapsed_ms = mbedtls_timing_get_timer( &ctx->MBEDTLS_PRIVATE(timer), 0 );
+-+    elapsed_ms = mbedtls_timing_get_timer( &ctx->esp_MBEDTLS_PRIVATE(timer), 0 );
+- 
+--    if( elapsed_ms >= ctx->MBEDTLS_PRIVATE(fin_ms) )
+-+    if( elapsed_ms >= ctx->esp_MBEDTLS_PRIVATE(fin_ms) )
+-         return( 2 );
+- 
+--    if( elapsed_ms >= ctx->MBEDTLS_PRIVATE(int_ms) )
+-+    if( elapsed_ms >= ctx->esp_MBEDTLS_PRIVATE(int_ms) )
+-         return( 1 );
+- 
+-     return( 0 );
+-@@ -104,7 +104,7 @@ int mbedtls_timing_get_delay( void *data )
+-  */
+- uint32_t mbedtls_timing_get_final_delay( const mbedtls_timing_delay_context *data )
+- {
+--    return( data->MBEDTLS_PRIVATE(fin_ms) );
+-+    return( data->esp_MBEDTLS_PRIVATE(fin_ms) );
+- }
+- 
+- #endif /* MBEDTLS_ESP_TIMING_C */

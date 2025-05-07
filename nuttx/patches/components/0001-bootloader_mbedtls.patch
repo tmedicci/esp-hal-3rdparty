@@ -36,9 +36,3 @@ index d58ba7fc26c6a77d247e9a5a3510ddc11f7f8231..652c99281ff5da90f815b5621885c5de
      free(handle);
      handle = NULL;
  }
-diff --git a/components/mbedtls/mbedtls b/components/mbedtls/mbedtls
---- a/components/mbedtls/mbedtls
-+++ b/components/mbedtls/mbedtls
-@@ -1 +1 @@
--Subproject commit 1d34215adb0ab8a0533e17420eb5967d99d860d1
-+Subproject commit 1d34215adb0ab8a0533e17420eb5967d99d860d1-dirty
