@@ -1,0 +1,44 @@
+diff --git a/components/bootloader_support/src/bootloader_sha.c b/components/bootloader_support/src/bootloader_sha.c
+index d58ba7fc26c6a77d247e9a5a3510ddc11f7f8231..652c99281ff5da90f815b5621885c5de91bea91b 100644
+--- a/components/bootloader_support/src/bootloader_sha.c
++++ b/components/bootloader_support/src/bootloader_sha.c
+@@ -169,8 +169,8 @@ bootloader_sha256_handle_t bootloader_sha256_start(void)
+     if (!ctx) {
+         return NULL;
+     }
+-    mbedtls_sha256_init(ctx);
+-    int ret = mbedtls_sha256_starts(ctx, false);
++    esp_mbedtls_sha256_init(ctx);
++    int ret = esp_mbedtls_sha256_starts(ctx, false);
+     if (ret != 0) {
+         return NULL;
+     }
+@@ -181,7 +181,7 @@ void bootloader_sha256_data(bootloader_sha256_handle_t handle, const void *data,
+ {
+     assert(handle != NULL);
+     mbedtls_sha256_context *ctx = (mbedtls_sha256_context *)handle;
+-    int ret = mbedtls_sha256_update(ctx, data, data_len);
++    int ret = esp_mbedtls_sha256_update(ctx, data, data_len);
+     assert(ret == 0);
+     (void)ret;
+ }
+@@ -191,11 +191,11 @@ void bootloader_sha256_finish(bootloader_sha256_handle_t handle, uint8_t *digest
+     assert(handle != NULL);
+     mbedtls_sha256_context *ctx = (mbedtls_sha256_context *)handle;
+     if (digest != NULL) {
+-        int ret = mbedtls_sha256_finish(ctx, digest);
++        int ret = esp_mbedtls_sha256_finish(ctx, digest);
+         assert(ret == 0);
+         (void)ret;
+     }
+-    mbedtls_sha256_free(ctx);
++    esp_mbedtls_sha256_free(ctx);
+     free(handle);
+     handle = NULL;
+ }
+diff --git a/components/mbedtls/mbedtls b/components/mbedtls/mbedtls
+--- a/components/mbedtls/mbedtls
++++ b/components/mbedtls/mbedtls
+@@ -1 +1 @@
+-Subproject commit 1d34215adb0ab8a0533e17420eb5967d99d860d1
++Subproject commit 1d34215adb0ab8a0533e17420eb5967d99d860d1-dirty
