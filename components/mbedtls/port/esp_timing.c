@@ -23,7 +23,7 @@
 #include "mbedtls/timing.h"
 
 #ifdef __NuttX__
-#   define mbedtls_timing_get_timer     esp_mbedtls_timing_get_timer
+#include "esp_mbedtls.h"
 #endif
 
 struct _hr_time
@@ -31,11 +31,7 @@ struct _hr_time
     struct timeval start;
 };
 
-#ifdef __NuttX__
-unsigned long esp_mbedtls_timing_get_timer( struct mbedtls_timing_hr_time *val, int reset )
-#else
 unsigned long mbedtls_timing_get_timer( struct mbedtls_timing_hr_time *val, int reset )
-#endif
 {
     struct _hr_time *t = (struct _hr_time *) val;
 
@@ -58,11 +54,7 @@ unsigned long mbedtls_timing_get_timer( struct mbedtls_timing_hr_time *val, int 
 /*
  * Set delays to watch
  */
-#ifdef __NuttX__
-void esp_mbedtls_timing_set_delay( void *data, uint32_t int_ms, uint32_t fin_ms )
-#else
 void mbedtls_timing_set_delay( void *data, uint32_t int_ms, uint32_t fin_ms )
-#endif
 {
     mbedtls_timing_delay_context *ctx = (mbedtls_timing_delay_context *) data;
 
@@ -76,11 +68,7 @@ void mbedtls_timing_set_delay( void *data, uint32_t int_ms, uint32_t fin_ms )
 /*
  * Get number of delays expired
  */
-#ifdef __NuttX__
-int esp_mbedtls_timing_get_delay( void *data )
-#else
 int mbedtls_timing_get_delay( void *data )
-#endif
 {
     mbedtls_timing_delay_context *ctx = (mbedtls_timing_delay_context *) data;
     unsigned long elapsed_ms;

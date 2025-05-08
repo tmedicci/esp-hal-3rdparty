@@ -15,6 +15,13 @@
 #define _ESP_MBEDTLS_H_
 
 #ifdef __NuttX__
+
+#ifndef MBEDTLS_ALLOW_PRIVATE_ACCESS
+#define MBEDTLS_PRIVATE(member) private_##member
+#else
+#define MBEDTLS_PRIVATE(member) member
+#endif
+
 #  define mbedtls_aes_crypt_cbc                     esp_mbedtls_aes_crypt_cbc
 #  define mbedtls_aes_crypt_ctr                     esp_mbedtls_aes_crypt_ctr
 #  define mbedtls_aes_crypt_ecb                     esp_mbedtls_aes_crypt_ecb
@@ -68,6 +75,8 @@
 #  define mbedtls_ecp_curve_info_from_grp_id        esp_mbedtls_ecp_curve_info_from_grp_id
 #  define mbedtls_ecp_curve_info_from_name          esp_mbedtls_ecp_curve_info_from_name
 #  define mbedtls_ecp_gen_key                       esp_mbedtls_ecp_gen_key
+#  define mbedtls_ecp_get_type                      esp_mbedtls_ecp_get_type
+#  define mbedtls_ecp_group_a_is_minus_3            esp_mbedtls_ecp_group_a_is_minus_3
 #  define mbedtls_ecp_group_copy                    esp_mbedtls_ecp_group_copy
 #  define mbedtls_ecp_group_free                    esp_mbedtls_ecp_group_free
 #  define mbedtls_ecp_group_init                    esp_mbedtls_ecp_group_init
@@ -82,6 +91,7 @@
 #  define mbedtls_entropy_free                      esp_mbedtls_entropy_free
 #  define mbedtls_entropy_func                      esp_mbedtls_entropy_func
 #  define mbedtls_entropy_init                      esp_mbedtls_entropy_init
+#  define mbedtls_hardware_poll                     esp_mbedtls_hardware_poll
 #  define mbedtls_md_finish                         esp_mbedtls_md_finish
 #  define mbedtls_md_free                           esp_mbedtls_md_free
 #  define mbedtls_md_get_type                       esp_mbedtls_md_get_type
@@ -170,9 +180,13 @@
 #  define mbedtls_ssl_session_reset                 esp_mbedtls_ssl_session_reset
 #  define mbedtls_ssl_set_bio                       esp_mbedtls_ssl_set_bio
 #  define mbedtls_ssl_set_export_keys_cb            esp_mbedtls_ssl_set_export_keys_cb
+#  define mbedtls_ssl_set_hostname                  esp_mbedtls_ssl_set_hostname
 #  define mbedtls_ssl_setup                         esp_mbedtls_ssl_setup
 #  define mbedtls_ssl_tls_prf                       esp_mbedtls_ssl_tls_prf
 #  define mbedtls_ssl_write                         esp_mbedtls_ssl_write
+#  define mbedtls_timing_get_delay                  esp_mbedtls_timing_get_delay
+#  define mbedtls_timing_get_timer                  esp_mbedtls_timing_get_timer
+#  define mbedtls_timing_set_delay                  esp_mbedtls_timing_set_delay
 #  define mbedtls_x509_crt_free                     esp_mbedtls_x509_crt_free
 #  define mbedtls_x509_crt_init                     esp_mbedtls_x509_crt_init
 #  define mbedtls_x509_crt_parse                    esp_mbedtls_x509_crt_parse

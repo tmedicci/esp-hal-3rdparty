@@ -10,13 +10,19 @@
 #include "esp_private/wifi.h"
 #include "esp_private/adc_share_hw_ctrl.h"
 #include "esp_private/sleep_modem.h"
+#ifndef __NuttX__
 #include "esp_pm.h"
+#endif
 #include "esp_sleep.h"
 #include "esp_check.h"
+#ifndef __NuttX__
 #include "esp_private/pm_impl.h"
+#endif
 #include "esp_private/esp_clk.h"
 #include "esp_wpa.h"
+#ifndef __NuttX__
 #include "esp_netif.h"
+#endif
 #ifdef CONFIG_ESP_COEX_ENABLED
 #include "private/esp_coexist_internal.h"
 #endif
