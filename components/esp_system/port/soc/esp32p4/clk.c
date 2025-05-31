@@ -78,7 +78,7 @@ static void select_rtc_slow_clk(soc_rtc_slow_clk_src_t rtc_slow_clk_src);
 
 static const char *TAG = "clk";
 
-void IRAM_ATTR esp_rtc_init(void)
+__attribute__((weak)) void IRAM_ATTR esp_rtc_init(void)
 {
 #if SOC_PMU_SUPPORTED
     pmu_init();
@@ -365,13 +365,6 @@ __attribute__((weak)) void esp_perip_clk_init(void)
         REG_CLR_BIT(HP_SYS_CLKRST_SOC_CLK_CTRL2_REG, HP_SYS_CLKRST_REG_UHCI_APB_CLK_EN);
         REG_CLR_BIT(HP_SYS_CLKRST_SOC_CLK_CTRL1_REG, HP_SYS_CLKRST_REG_UHCI_SYS_CLK_EN);
 
-#if !CONFIG_USJ_ENABLE_USB_SERIAL_JTAG && !CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG_ENABLED
-        // Disable USB-Serial-JTAG clock and it's pad if not used
-        usb_serial_jtag_ll_phy_enable_pad(false);
-        _usb_serial_jtag_ll_enable_bus_clock(false);
-        REG_SET_BIT(USB_SERIAL_JTAG_MEM_CONF_REG, USB_SERIAL_JTAG_USB_MEM_PD);
-        REG_CLR_BIT(USB_SERIAL_JTAG_MEM_CONF_REG, USB_SERIAL_JTAG_USB_MEM_CLK_EN);
-#endif
     }
 
     // HP modules' clock source gating control

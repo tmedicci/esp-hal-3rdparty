@@ -73,7 +73,7 @@ static void bootloader_check_wdt_reset(void)
     soc_reset_reason_t rst_reason = esp_rom_get_reset_reason(0);
     if (rst_reason == RESET_REASON_CPU_MWDT || rst_reason == RESET_REASON_CPU_RWDT || rst_reason == RESET_REASON_CORE_MWDT ||
         rst_reason == RESET_REASON_CORE_RWDT || rst_reason == RESET_REASON_SYS_RWDT) {
-        ESP_LOGW(TAG, "CPU has been reset by WDT.");
+        ESP_EARLY_LOGW(TAG, "CPU has been reset by WDT.");
         wdt_rst = 1;
     }
     if (wdt_rst) {
@@ -168,7 +168,7 @@ esp_err_t bootloader_init(void)
     bootloader_flash_update_id();
     // Check and run XMC startup flow
     if ((ret = bootloader_flash_xmc_startup()) != ESP_OK) {
-        ESP_LOGE(TAG, "failed when running XMC startup flow, reboot!");
+        ESP_EARLY_LOGE(TAG, "afailed when running XMC startup flow, reboot!");
         return ret;
     }
     // read bootloader header
