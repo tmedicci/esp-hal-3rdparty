@@ -619,10 +619,18 @@ esp_err_t esp_mmu_map(esp_paddr_t paddr_start, size_t size, mmu_target_t target,
 
 err:
     if (dummy_tail) {
+#ifdef __NuttX__
+        kmm_free(dummy_tail);
+#else
         free(dummy_tail);
+#endif
     }
     if (dummy_head) {
+#ifdef __NuttX__
+        kmm_free(dummy_head);
+#else
         free(dummy_head);
+#endif
     }
     _lock_release(&s_mmu_ctx.mutex);
 
@@ -707,7 +715,11 @@ esp_err_t esp_mmu_unmap(void *ptr)
 
     //do unmap
     s_do_unmapping(mem_block->vaddr_start, mem_block->size);
+#ifdef __NuttX__
+    kmm_free(found_block);
+#else
     free(found_block);
+#endif
 
     _lock_release(&s_mmu_ctx.mutex);
 

@@ -109,7 +109,7 @@ void bootloader_enable_random(void)
     bootloader_random_enable();
 }
 
-#ifndef __NuttX__
+#if !defined(__NuttX__) && !defined(CONFIG_ESPRESSIF_BOOTLOADER_MCUBOOT)
 void bootloader_print_banner(void)
 {
     if (CONFIG_BOOTLOADER_LOG_LEVEL >= ESP_LOG_INFO) {

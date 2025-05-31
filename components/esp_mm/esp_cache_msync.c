@@ -13,8 +13,8 @@
 #include "esp_log.h"
 #ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
-#include "esp_heap_caps.h"
 #endif
+#include "esp_heap_caps.h"
 #include "esp_rom_caps.h"
 #include "soc/soc_caps.h"
 #include "hal/mmu_hal.h"
