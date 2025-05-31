@@ -6,6 +6,7 @@
 
 #ifdef __NuttX__
 #include <nuttx/spinlock.h>
+#include "esp_attr.h"
 #else
 #include <freertos/FreeRTOS.h>
 #endif
@@ -176,13 +177,13 @@ esp_err_t IRAM_ATTR periph_rtc_mpll_acquire(void)
     ESP_RETURN_ON_ERROR(esp_ldo_acquire_channel(&ldo_mpll_config, &s_ldo_chan), TAG, "acquire internal LDO for MPLL failed");
 #endif
 
-    portENTER_CRITICAL(&periph_spinlock);
+    ENTER_CRITICAL_SECTION(&periph_spinlock);
     s_mpll_ref_cnt++;
     if (s_mpll_ref_cnt == 1) {
         // For the first time enable MPLL, need to set power up
         rtc_clk_mpll_enable();
     }
-    portEXIT_CRITICAL(&periph_spinlock);
+    LEAVE_CRITICAL_SECTION(&periph_spinlock);
     return ESP_OK;
 }
 
@@ -193,7 +194,7 @@ void periph_rtc_mpll_release(void)
         esp_ldo_release_channel(s_ldo_chan);
     }
 #endif
-    portENTER_CRITICAL(&periph_spinlock);
+    ENTER_CRITICAL_SECTION(&periph_spinlock);
     assert(s_mpll_ref_cnt > 0);
     s_mpll_ref_cnt--;
     if (s_mpll_ref_cnt == 0) {
@@ -201,7 +202,7 @@ void periph_rtc_mpll_release(void)
         s_cur_mpll_freq_hz = 0;
         rtc_clk_mpll_disable();
     }
-    portEXIT_CRITICAL(&periph_spinlock);
+    LEAVE_CRITICAL_SECTION(&periph_spinlock);
 }
 
 esp_err_t IRAM_ATTR periph_rtc_mpll_freq_set(uint32_t expt_freq_hz, uint32_t *real_freq_hz)
@@ -211,7 +212,7 @@ esp_err_t IRAM_ATTR periph_rtc_mpll_freq_set(uint32_t expt_freq_hz, uint32_t *re
     // Guarantee 'periph_rtc_apll_acquire' has been called before set apll freq
     assert(s_mpll_ref_cnt > 0);
 
-    portENTER_CRITICAL(&periph_spinlock);
+    ENTER_CRITICAL_SECTION(&periph_spinlock);
     if (s_cur_mpll_freq_hz == expt_freq_hz) {
         goto end;
     }
@@ -228,7 +229,7 @@ end:
     if (real_freq_hz != NULL) {
         *real_freq_hz = s_cur_mpll_freq_hz;
     }
-    portEXIT_CRITICAL(&periph_spinlock);
+    LEAVE_CRITICAL_SECTION(&periph_spinlock);
     return ret;
 }
 #endif // SOC_CLK_MPLL_SUPPORTED

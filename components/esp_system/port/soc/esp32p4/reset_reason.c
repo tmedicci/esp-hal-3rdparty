@@ -11,6 +11,9 @@
 #include "soc/chip_revision.h"
 #include "hal/efuse_hal.h"
 #include "esp32p4/rom/rtc.h"
+#ifdef __NuttX__
+#include "esp_attr.h"
+#endif
 
 static void esp_reset_reason_clear_hint(void);
 
