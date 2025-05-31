@@ -6,6 +6,7 @@
 
 #ifdef __NuttX__
 #include <nuttx/spinlock.h>
+#include "esp_attr.h"
 #else
 #include <freertos/FreeRTOS.h>
 #endif
