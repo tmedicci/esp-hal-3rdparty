@@ -25,7 +25,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/queue.h>
 
-#define NR_IRQSTATE_FLAGS   3
+#define NR_IRQSTATE_FLAGS   30
 
 #define ENTER_CRITICAL_SECTION(lock) do { \
         if (!g_periph_ctrl_lock_initialized) { \
@@ -62,7 +62,6 @@ static bool g_periph_ctrl_lock_initialized = false;
 static sq_queue_t g_periph_ctrl_int_flags_free;
 static sq_queue_t g_periph_ctrl_int_flags_used;
 static struct irqstate_list_s g_periph_ctrl_int_flags[NR_IRQSTATE_FLAGS];
-static spinlock_t periph_spinlock;
 #else
 #define ENTER_CRITICAL_SECTION(lock)    portENTER_CRITICAL_SAFE(lock)
 #define LEAVE_CRITICAL_SECTION(lock)    portEXIT_CRITICAL_SAFE(lock)
