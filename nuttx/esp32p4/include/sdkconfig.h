@@ -8,6 +8,10 @@
 
 #include <nuttx/config.h>
 
+#ifndef CONFIG_SMP
+#define CONFIG_ESP_SYSTEM_SINGLE_CORE_MODE 1
+#endif
+
 #define IDF_VER 0
 
 #define CONFIG_SOC_ADC_SUPPORTED 1
