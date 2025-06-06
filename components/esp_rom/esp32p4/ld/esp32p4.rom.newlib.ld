@@ -30,8 +30,10 @@ atoi = 0x4fc00360;
 atol = 0x4fc00364;
 strtol = 0x4fc00368;
 strtoul = 0x4fc0036c;
+#ifndef __NuttX__
 fflush = 0x4fc00370;
 _fflush_r = 0x4fc00374;
+#endif
 _fwalk = 0x4fc00378;
 _fwalk_reent = 0x4fc0037c;
 __smakebuf_r = 0x4fc00380;
