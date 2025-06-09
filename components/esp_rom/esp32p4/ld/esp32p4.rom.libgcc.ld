@@ -36,7 +36,9 @@ __cmpdi2 = 0x4fc00774;
 __ctzdi2 = 0x4fc00778;
 __ctzsi2 = 0x4fc0077c;
 __divdc3 = 0x4fc00780;
+#ifndef __NuttX__
 __divdf3 = 0x4fc00784;
+#endif
 __divdi3 = 0x4fc00788;
 __divsc3 = 0x4fc0078c;
 __divsi3 = 0x4fc00790;
@@ -47,7 +49,9 @@ __ffssi2 = 0x4fc007a0;
 __fixdfdi = 0x4fc007a4;
 __fixdfsi = 0x4fc007a8;
 __fixsfdi = 0x4fc007ac;
+#ifndef __NuttX__
 __fixunsdfsi = 0x4fc007b0;
+#endif
 __fixunssfdi = 0x4fc007b4;
 __fixunssfsi = 0x4fc007b8;
 __floatdidf = 0x4fc007bc;
@@ -65,7 +69,9 @@ __ltdf2 = 0x4fc007e8;
 __moddi3 = 0x4fc007ec;
 __modsi3 = 0x4fc007f0;
 __muldc3 = 0x4fc007f4;
+#ifndef __NuttX__
 __muldf3 = 0x4fc007f8;
+#endif
 __muldi3 = 0x4fc007fc;
 __mulsc3 = 0x4fc00800;
 __mulsi3 = 0x4fc00804;
