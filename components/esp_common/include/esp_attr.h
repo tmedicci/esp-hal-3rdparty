@@ -73,6 +73,7 @@ extern "C" {
 // Forces bss into IRAM instead of DRAM
 #ifndef IRAM_BSS_ATTR
 #define IRAM_BSS_ATTR __attribute__((section(".iram.bss")))
+#endif
 #else
 
 // IRAM is not accessible as an 8-bit memory, put IRAM coredump variables in DRAM
