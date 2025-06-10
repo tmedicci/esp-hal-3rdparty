@@ -556,6 +556,10 @@
 #define CONFIG_LOG_MAXIMUM_LEVEL 0
 #endif
 
+#ifndef CONFIG_SMP
+#  define CONFIG_ESP_SYSTEM_SINGLE_CORE_MODE 1
+#endif
+
 /* SPI Flash related configs */
 
 #if defined(CONFIG_ESP32_FLASH_MODE_QIO)
