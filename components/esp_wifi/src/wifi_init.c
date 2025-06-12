@@ -118,10 +118,16 @@ static void __attribute__((constructor)) s_set_default_wifi_log_level(void)
        so set it at runtime startup. Done here not in esp_wifi_init() to allow
        the user to set the level again before esp_wifi_init() is called.
     */
+#ifndef __NuttX__
+    /* We skip this contructor in NuttX because 'esp_log_level_set'
+     * eventually requires heap usage for malloc and we do not have
+     * heap available yet (too early in startup, nx_start was not called).
+     */
     esp_log_level_set("wifi", CONFIG_LOG_DEFAULT_LEVEL);
     esp_log_level_set("mesh", CONFIG_LOG_DEFAULT_LEVEL);
     esp_log_level_set("smartconfig", CONFIG_LOG_DEFAULT_LEVEL);
     esp_log_level_set("ESPNOW", CONFIG_LOG_DEFAULT_LEVEL);
+#endif
 }
 
 static void esp_wifi_set_log_level(void)
