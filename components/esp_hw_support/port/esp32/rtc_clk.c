@@ -28,7 +28,7 @@
 #include "soc/rtc_cntl_reg.h"
 #include "soc/io_mux_reg.h"
 
-#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) || defined(CONFIG_ESPRESSIF_BOOTLOADER_MCUBOOT)
+#ifdef __NuttX__
 #define BOOTLOADER_BUILD 1
 #endif
 
