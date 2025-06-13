@@ -12,7 +12,7 @@
 #include "soc/rtc.h"
 #include "rom/rtc.h"
 
-#if CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61
+#if CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32C61 || CONFIG_IDF_TARGET_ESP32P4
 #include "esp_private/esp_pmu.h"
 #endif
 
