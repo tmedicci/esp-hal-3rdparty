@@ -14,7 +14,9 @@
 #include "esp_sleep.h"
 #include "esp_log.h"
 #include "esp_check.h"
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
+#endif
 
 ESP_LOG_ATTR_TAG(TAG, "sleep_event");
 
