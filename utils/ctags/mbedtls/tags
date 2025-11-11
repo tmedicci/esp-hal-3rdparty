@@ -14,6 +14,8 @@
 !_TAG_KIND_DESCRIPTION!C	f,function	/function definitions/
 !_TAG_KIND_DESCRIPTION!C	p,prototype	/function prototypes/
 !_TAG_KIND_DESCRIPTION!C	v,variable	/variable definitions/
+!_TAG_KIND_DESCRIPTION!C++	M,module	/modules/
+!_TAG_KIND_DESCRIPTION!C++	P,partition	/partitions/
 !_TAG_KIND_DESCRIPTION!C++	c,class	/classes/
 !_TAG_KIND_DESCRIPTION!C++	f,function	/function definitions/
 !_TAG_KIND_DESCRIPTION!C++	n,namespace	/namespaces/
@@ -22,16 +24,19 @@
 !_TAG_OUTPUT_EXCMD	mixed	/number, pattern, mixed, or combineV2/
 !_TAG_OUTPUT_FILESEP	slash	/slash or backslash/
 !_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
-!_TAG_OUTPUT_VERSION	0.0	/current.age/
+!_TAG_OUTPUT_VERSION	1.1	/current.age/
 !_TAG_PARSER_VERSION!C	1.1	/current.age/
 !_TAG_PARSER_VERSION!C++	1.1	/current.age/
 !_TAG_PATTERN_LENGTH_LIMIT	96	/0 for no limit/
-!_TAG_PROC_CWD	/home/tiago/Documents/work/espressif/projects/nuttx/nuttxspace/esp-hal-3rdparty/	//
+!_TAG_PROC_CWD	/home/tiago/Documents/work/espressif/projects/nuttx/nuttxspace_alfa/esp-hal-3rdparty/	//
 !_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
 !_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
 !_TAG_PROGRAM_URL	https://ctags.io/	/official site/
-!_TAG_PROGRAM_VERSION	6.1.0	/v6.1.0/
+!_TAG_PROGRAM_VERSION	6.2.0	/v6.2.0/
 !_TAG_ROLE_DESCRIPTION!C!function	foreigndecl	/declared in foreign languages/
+!_TAG_ROLE_DESCRIPTION!C++!module	imported	/imported with "imported ..."/
+!_TAG_ROLE_DESCRIPTION!C++!module	partOwner	/used for specifying a partition/
+!_TAG_ROLE_DESCRIPTION!C++!partition	imported	/imported with "imported ..."/
 D_INTR_CONSTANT_BYTES	components/mbedtls/mbedtls/library/lms.c	/^static const unsigned char D_INTR_CONSTANT_BYTES[D_CONST_LEN] = { 0x83, 0x83 };$/;"	v	typeref:typename:const unsigned char[]	file:
 D_LEAF_CONSTANT_BYTES	components/mbedtls/mbedtls/library/lms.c	/^static const unsigned char D_LEAF_CONSTANT_BYTES[D_CONST_LEN] = { 0x82, 0x82 };$/;"	v	typeref:typename:const unsigned char[]	file:
 D_MESSAGE_CONSTANT_BYTES	components/mbedtls/mbedtls/library/lmots.c	/^static const unsigned char D_MESSAGE_CONSTANT_BYTES[D_CONST_LEN] = { 0x81, 0x81 };$/;"	v	typeref:typename:const unsigned char[]	file:
@@ -1524,7 +1529,6 @@ get_no_padding	components/mbedtls/mbedtls/library/cipher.c	/^static int get_no_p
 get_one_and_zeros_padding	components/mbedtls/mbedtls/library/cipher.c	/^static int get_one_and_zeros_padding(unsigned char *input, size_t input_len,$/;"	f	typeref:typename:int	file:
 get_persistent_key_slot	components/mbedtls/mbedtls/library/psa_crypto_slot_management.c	/^static inline psa_key_slot_t *get_persistent_key_slot(size_t slot_idx)$/;"	f	typeref:typename:psa_key_slot_t *	file:
 get_persistent_key_slot	components/mbedtls/mbedtls/library/psa_crypto_slot_management.c	/^static inline psa_key_slot_t *get_persistent_key_slot(size_t slot_idx);$/;"	p	typeref:typename:psa_key_slot_t *	file:
-get_pkcs_padding	components/mbedtls/mbedtls/library/cipher.c	/^static int get_pkcs_padding(unsigned char *input, size_t input_len,$/;"	f	typeref:typename:int	file:
 get_volatile_key_slot	components/mbedtls/mbedtls/library/psa_crypto_slot_management.c	/^static inline psa_key_slot_t *get_volatile_key_slot(psa_key_id_t key_id)$/;"	f	typeref:typename:psa_key_slot_t *	file:
 get_volatile_key_slot	components/mbedtls/mbedtls/library/psa_crypto_slot_management.c	/^static inline psa_key_slot_t *get_volatile_key_slot(psa_key_id_t key_id);$/;"	p	typeref:typename:psa_key_slot_t *	file:
 get_zeros_and_len_padding	components/mbedtls/mbedtls/library/cipher.c	/^static int get_zeros_and_len_padding(unsigned char *input, size_t input_len,$/;"	f	typeref:typename:int	file:
@@ -1863,7 +1867,7 @@ mbedtls_cipher_auth_decrypt_ext	components/mbedtls/mbedtls/include/mbedtls/ciphe
 mbedtls_cipher_auth_decrypt_ext	components/mbedtls/mbedtls/library/cipher.c	/^int mbedtls_cipher_auth_decrypt_ext(mbedtls_cipher_context_t *ctx,$/;"	f	typeref:typename:int
 mbedtls_cipher_auth_encrypt_ext	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^int mbedtls_cipher_auth_encrypt_ext(mbedtls_cipher_context_t *ctx,$/;"	p	typeref:typename:int
 mbedtls_cipher_auth_encrypt_ext	components/mbedtls/mbedtls/library/cipher.c	/^int mbedtls_cipher_auth_encrypt_ext(mbedtls_cipher_context_t *ctx,$/;"	f	typeref:typename:int
-mbedtls_cipher_base_lookup_table	components/mbedtls/mbedtls/library/cipher_wrap.c	/^const mbedtls_cipher_base_t *mbedtls_cipher_base_lookup_table[] = {$/;"	v	typeref:typename:const mbedtls_cipher_base_t * []
+mbedtls_cipher_base_lookup_table	components/mbedtls/mbedtls/library/cipher_wrap.c	/^const mbedtls_cipher_base_t * const mbedtls_cipher_base_lookup_table[] = {$/;"	v	typeref:typename:const mbedtls_cipher_base_t * const[]
 mbedtls_cipher_check_tag	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^int mbedtls_cipher_check_tag(mbedtls_cipher_context_t *ctx,$/;"	p	typeref:typename:int
 mbedtls_cipher_check_tag	components/mbedtls/mbedtls/library/cipher.c	/^int mbedtls_cipher_check_tag(mbedtls_cipher_context_t *ctx,$/;"	f	typeref:typename:int
 mbedtls_cipher_cmac	components/mbedtls/mbedtls/include/mbedtls/cmac.h	/^int mbedtls_cipher_cmac(const mbedtls_cipher_info_t *cipher_info,$/;"	p	typeref:typename:int
@@ -2417,6 +2421,8 @@ mbedtls_gcm_update	components/mbedtls/mbedtls/include/mbedtls/gcm.h	/^int mbedtl
 mbedtls_gcm_update	components/mbedtls/mbedtls/library/gcm.c	/^int mbedtls_gcm_update(mbedtls_gcm_context *ctx,$/;"	f	typeref:typename:int
 mbedtls_gcm_update_ad	components/mbedtls/mbedtls/include/mbedtls/gcm.h	/^int mbedtls_gcm_update_ad(mbedtls_gcm_context *ctx,$/;"	p	typeref:typename:int
 mbedtls_gcm_update_ad	components/mbedtls/mbedtls/library/gcm.c	/^int mbedtls_gcm_update_ad(mbedtls_gcm_context *ctx,$/;"	f	typeref:typename:int
+mbedtls_get_pkcs_padding	components/mbedtls/mbedtls/library/cipher.c	/^MBEDTLS_STATIC_TESTABLE int mbedtls_get_pkcs_padding(unsigned char *input,$/;"	f	typeref:typename:MBEDTLS_STATIC_TESTABLE int
+mbedtls_get_pkcs_padding	components/mbedtls/mbedtls/library/cipher_invasive.h	/^MBEDTLS_STATIC_TESTABLE int mbedtls_get_pkcs_padding(unsigned char *input,$/;"	p	typeref:typename:MBEDTLS_STATIC_TESTABLE int
 mbedtls_get_unaligned_uint16	components/mbedtls/mbedtls/library/alignment.h	/^static inline uint16_t mbedtls_get_unaligned_uint16(const void *p)$/;"	f	typeref:typename:uint16_t
 mbedtls_get_unaligned_uint32	components/mbedtls/mbedtls/library/alignment.h	/^static inline uint32_t mbedtls_get_unaligned_uint32(const void *p)$/;"	f	typeref:typename:uint32_t
 mbedtls_get_unaligned_uint64	components/mbedtls/mbedtls/library/alignment.h	/^static inline uint64_t mbedtls_get_unaligned_uint64(const void *p)$/;"	f	typeref:typename:uint64_t
@@ -3736,6 +3742,8 @@ mbedtls_ssl_early_data_status_str	components/mbedtls/mbedtls/library/ssl_debug_h
 mbedtls_ssl_encrypt_buf	components/mbedtls/mbedtls/library/ssl_misc.h	/^int mbedtls_ssl_encrypt_buf(mbedtls_ssl_context *ssl,$/;"	p	typeref:typename:MBEDTLS_CHECK_RETURN_CRITICAL int
 mbedtls_ssl_encrypt_buf	components/mbedtls/mbedtls/library/ssl_msg.c	/^int mbedtls_ssl_encrypt_buf(mbedtls_ssl_context *ssl,$/;"	f	typeref:typename:int
 mbedtls_ssl_ep_len	components/mbedtls/mbedtls/library/ssl_misc.h	/^static inline size_t mbedtls_ssl_ep_len(const mbedtls_ssl_context *ssl)$/;"	f	typeref:typename:size_t
+mbedtls_ssl_export_keying_material	components/mbedtls/mbedtls/include/mbedtls/ssl.h	/^int mbedtls_ssl_export_keying_material(mbedtls_ssl_context *ssl,$/;"	p	typeref:typename:int
+mbedtls_ssl_export_keying_material	components/mbedtls/mbedtls/library/ssl_tls.c	/^int mbedtls_ssl_export_keying_material(mbedtls_ssl_context *ssl,$/;"	f	typeref:typename:int
 mbedtls_ssl_fetch_input	components/mbedtls/mbedtls/library/ssl_misc.h	/^int mbedtls_ssl_fetch_input(mbedtls_ssl_context *ssl, size_t nb_want);$/;"	p	typeref:typename:MBEDTLS_CHECK_RETURN_CRITICAL int
 mbedtls_ssl_fetch_input	components/mbedtls/mbedtls/library/ssl_msg.c	/^int mbedtls_ssl_fetch_input(mbedtls_ssl_context *ssl, size_t nb_want)$/;"	f	typeref:typename:int
 mbedtls_ssl_finish_handshake_msg	components/mbedtls/mbedtls/library/ssl_misc.h	/^int mbedtls_ssl_finish_handshake_msg(mbedtls_ssl_context *ssl,$/;"	p	typeref:typename:MBEDTLS_CHECK_RETURN_CRITICAL int
@@ -3852,6 +3860,7 @@ mbedtls_ssl_handshake_client_step	components/mbedtls/mbedtls/library/ssl_misc.h	
 mbedtls_ssl_handshake_client_step	components/mbedtls/mbedtls/library/ssl_tls12_client.c	/^int mbedtls_ssl_handshake_client_step(mbedtls_ssl_context *ssl)$/;"	f	typeref:typename:int
 mbedtls_ssl_handshake_free	components/mbedtls/mbedtls/library/ssl_misc.h	/^void mbedtls_ssl_handshake_free(mbedtls_ssl_context *ssl);$/;"	p	typeref:typename:void
 mbedtls_ssl_handshake_free	components/mbedtls/mbedtls/library/ssl_tls.c	/^void mbedtls_ssl_handshake_free(mbedtls_ssl_context *ssl)$/;"	f	typeref:typename:void
+mbedtls_ssl_handshake_increment_state	components/mbedtls/mbedtls/library/ssl_misc.h	/^static inline void mbedtls_ssl_handshake_increment_state(mbedtls_ssl_context *ssl)$/;"	f	typeref:typename:void
 mbedtls_ssl_handshake_server_step	components/mbedtls/mbedtls/library/ssl_misc.h	/^int mbedtls_ssl_handshake_server_step(mbedtls_ssl_context *ssl);$/;"	p	typeref:typename:MBEDTLS_CHECK_RETURN_CRITICAL int
 mbedtls_ssl_handshake_server_step	components/mbedtls/mbedtls/library/ssl_tls12_server.c	/^int mbedtls_ssl_handshake_server_step(mbedtls_ssl_context *ssl)$/;"	f	typeref:typename:int
 mbedtls_ssl_handshake_set_state	components/mbedtls/mbedtls/library/ssl_misc.h	/^static inline void mbedtls_ssl_handshake_set_state(mbedtls_ssl_context *ssl,$/;"	f	typeref:typename:void
@@ -4035,6 +4044,7 @@ mbedtls_ssl_start_renegotiation	components/mbedtls/mbedtls/library/ssl_misc.h	/^
 mbedtls_ssl_start_renegotiation	components/mbedtls/mbedtls/library/ssl_tls.c	/^int mbedtls_ssl_start_renegotiation(mbedtls_ssl_context *ssl)$/;"	f	typeref:typename:int
 mbedtls_ssl_states_str	components/mbedtls/mbedtls/library/ssl_debug_helpers.h	/^const char *mbedtls_ssl_states_str(mbedtls_ssl_states in);$/;"	p	typeref:typename:const char *
 mbedtls_ssl_states_str	components/mbedtls/mbedtls/library/ssl_debug_helpers_generated.c	/^const char *mbedtls_ssl_states_str( mbedtls_ssl_states in )$/;"	f	typeref:typename:const char *
+mbedtls_ssl_states_str	components/mbedtls/mbedtls/library/ssl_misc.h	/^const char *mbedtls_ssl_states_str(mbedtls_ssl_states state);$/;"	p	typeref:typename:const char *
 mbedtls_ssl_ticket_free	components/mbedtls/mbedtls/include/mbedtls/ssl_ticket.h	/^void mbedtls_ssl_ticket_free(mbedtls_ssl_ticket_context *ctx);$/;"	p	typeref:typename:void
 mbedtls_ssl_ticket_free	components/mbedtls/mbedtls/library/ssl_ticket.c	/^void mbedtls_ssl_ticket_free(mbedtls_ssl_ticket_context *ctx)$/;"	f	typeref:typename:void
 mbedtls_ssl_ticket_init	components/mbedtls/mbedtls/include/mbedtls/ssl_ticket.h	/^void mbedtls_ssl_ticket_init(mbedtls_ssl_ticket_context *ctx);$/;"	p	typeref:typename:void
@@ -4047,6 +4057,7 @@ mbedtls_ssl_ticket_setup	components/mbedtls/mbedtls/include/mbedtls/ssl_ticket.h
 mbedtls_ssl_ticket_setup	components/mbedtls/mbedtls/library/ssl_ticket.c	/^int mbedtls_ssl_ticket_setup(mbedtls_ssl_ticket_context *ctx,$/;"	f	typeref:typename:int
 mbedtls_ssl_ticket_write	components/mbedtls/mbedtls/include/mbedtls/ssl_ticket.h	/^mbedtls_ssl_ticket_write_t mbedtls_ssl_ticket_write;$/;"	v	typeref:typename:mbedtls_ssl_ticket_write_t
 mbedtls_ssl_ticket_write	components/mbedtls/mbedtls/library/ssl_ticket.c	/^int mbedtls_ssl_ticket_write(void *p_ticket,$/;"	f	typeref:typename:int
+mbedtls_ssl_tls12_export_keying_material	components/mbedtls/mbedtls/library/ssl_tls.c	/^static int mbedtls_ssl_tls12_export_keying_material(const mbedtls_ssl_context *ssl,$/;"	f	typeref:typename:int	file:
 mbedtls_ssl_tls12_get_preferred_hash_for_sig_alg	components/mbedtls/mbedtls/library/ssl_misc.h	/^unsigned int mbedtls_ssl_tls12_get_preferred_hash_for_sig_alg($/;"	p	typeref:typename:unsigned int
 mbedtls_ssl_tls12_get_preferred_hash_for_sig_alg	components/mbedtls/mbedtls/library/ssl_tls.c	/^unsigned int mbedtls_ssl_tls12_get_preferred_hash_for_sig_alg($/;"	f	typeref:typename:unsigned int
 mbedtls_ssl_tls12_named_group_is_ecdhe	components/mbedtls/mbedtls/library/ssl_misc.h	/^static inline int mbedtls_ssl_tls12_named_group_is_ecdhe(uint16_t named_group)$/;"	f	typeref:typename:int
@@ -4088,6 +4099,9 @@ mbedtls_ssl_tls13_evolve_secret	components/mbedtls/mbedtls/library/ssl_tls13_key
 mbedtls_ssl_tls13_evolve_secret	components/mbedtls/mbedtls/library/ssl_tls13_keys.h	/^int mbedtls_ssl_tls13_evolve_secret($/;"	p	typeref:typename:MBEDTLS_CHECK_RETURN_CRITICAL int
 mbedtls_ssl_tls13_export_handshake_psk	components/mbedtls/mbedtls/library/ssl_tls13_keys.c	/^int mbedtls_ssl_tls13_export_handshake_psk(mbedtls_ssl_context *ssl,$/;"	f	typeref:typename:int
 mbedtls_ssl_tls13_export_handshake_psk	components/mbedtls/mbedtls/library/ssl_tls13_keys.h	/^int mbedtls_ssl_tls13_export_handshake_psk(mbedtls_ssl_context *ssl,$/;"	p	typeref:typename:MBEDTLS_CHECK_RETURN_CRITICAL int
+mbedtls_ssl_tls13_export_keying_material	components/mbedtls/mbedtls/library/ssl_tls.c	/^static int mbedtls_ssl_tls13_export_keying_material(mbedtls_ssl_context *ssl,$/;"	f	typeref:typename:int	file:
+mbedtls_ssl_tls13_exporter	components/mbedtls/mbedtls/library/ssl_tls13_keys.c	/^int mbedtls_ssl_tls13_exporter(const psa_algorithm_t hash_alg,$/;"	f	typeref:typename:int
+mbedtls_ssl_tls13_exporter	components/mbedtls/mbedtls/library/ssl_tls13_keys.h	/^int mbedtls_ssl_tls13_exporter(const psa_algorithm_t hash_alg,$/;"	p	typeref:typename:int
 mbedtls_ssl_tls13_fetch_handshake_msg	components/mbedtls/mbedtls/library/ssl_misc.h	/^int mbedtls_ssl_tls13_fetch_handshake_msg(mbedtls_ssl_context *ssl,$/;"	p	typeref:typename:MBEDTLS_CHECK_RETURN_CRITICAL int
 mbedtls_ssl_tls13_fetch_handshake_msg	components/mbedtls/mbedtls/library/ssl_tls13_generic.c	/^int mbedtls_ssl_tls13_fetch_handshake_msg(mbedtls_ssl_context *ssl,$/;"	f	typeref:typename:int
 mbedtls_ssl_tls13_finalize_client_hello	components/mbedtls/mbedtls/library/ssl_misc.h	/^int mbedtls_ssl_tls13_finalize_client_hello(mbedtls_ssl_context *ssl);$/;"	p	typeref:typename:int
@@ -5960,8 +5974,8 @@ ssl_ticket_update_keys	components/mbedtls/mbedtls/library/ssl_ticket.c	/^static 
 ssl_tls12_handle_hs_message_post_handshake	components/mbedtls/mbedtls/library/ssl_msg.c	/^static int ssl_tls12_handle_hs_message_post_handshake(mbedtls_ssl_context *ssl)$/;"	f	typeref:typename:MBEDTLS_CHECK_RETURN_CRITICAL int	file:
 ssl_tls12_populate_transform	components/mbedtls/mbedtls/library/ssl_tls.c	/^static int ssl_tls12_populate_transform(mbedtls_ssl_transform *transform,$/;"	f	typeref:typename:MBEDTLS_CHECK_RETURN_CRITICAL int	file:
 ssl_tls12_populate_transform	components/mbedtls/mbedtls/library/ssl_tls.c	/^static int ssl_tls12_populate_transform(mbedtls_ssl_transform *transform,$/;"	p	typeref:typename:MBEDTLS_CHECK_RETURN_CRITICAL int	file:
-ssl_tls12_preset_default_sig_algs	components/mbedtls/mbedtls/library/ssl_tls.c	/^static uint16_t ssl_tls12_preset_default_sig_algs[] = {$/;"	v	typeref:typename:uint16_t[]	file:
-ssl_tls12_preset_suiteb_sig_algs	components/mbedtls/mbedtls/library/ssl_tls.c	/^static uint16_t ssl_tls12_preset_suiteb_sig_algs[] = {$/;"	v	typeref:typename:uint16_t[]	file:
+ssl_tls12_preset_default_sig_algs	components/mbedtls/mbedtls/library/ssl_tls.c	/^static const uint16_t ssl_tls12_preset_default_sig_algs[] = {$/;"	v	typeref:typename:const uint16_t[]	file:
+ssl_tls12_preset_suiteb_sig_algs	components/mbedtls/mbedtls/library/ssl_tls.c	/^static const uint16_t ssl_tls12_preset_suiteb_sig_algs[] = {$/;"	v	typeref:typename:const uint16_t[]	file:
 ssl_tls12_session_load	components/mbedtls/mbedtls/library/ssl_tls.c	/^static int ssl_tls12_session_load(mbedtls_ssl_session *session,$/;"	f	typeref:typename:MBEDTLS_CHECK_RETURN_CRITICAL int	file:
 ssl_tls12_session_load	components/mbedtls/mbedtls/library/ssl_tls.c	/^static int ssl_tls12_session_load(mbedtls_ssl_session *session,$/;"	p	typeref:typename:MBEDTLS_CHECK_RETURN_CRITICAL int	file:
 ssl_tls12_session_save	components/mbedtls/mbedtls/library/ssl_tls.c	/^static size_t ssl_tls12_session_save(const mbedtls_ssl_session *session,$/;"	f	typeref:typename:size_t	file:
@@ -6184,9 +6198,9 @@ threading_mutex_init_pthread	components/mbedtls/mbedtls/library/threading.c	/^st
 threading_mutex_lock_pthread	components/mbedtls/mbedtls/library/threading.c	/^static int threading_mutex_lock_pthread(mbedtls_threading_mutex_t *mutex)$/;"	f	typeref:typename:int	file:
 threading_mutex_unlock_pthread	components/mbedtls/mbedtls/library/threading.c	/^static int threading_mutex_unlock_pthread(mbedtls_threading_mutex_t *mutex)$/;"	f	typeref:typename:int	file:
 ticket_flag_name_table	components/mbedtls/mbedtls/library/ssl_tls.c	/^static const char *ticket_flag_name_table[] =$/;"	v	typeref:typename:const char * []	file:
-tls13_label_prefix	components/mbedtls/mbedtls/library/ssl_tls13_keys.c	/^static const char tls13_label_prefix[6] = "tls13 ";$/;"	v	typeref:typename:const char[6]	file:
-tls_id_curve_name_table	components/mbedtls/mbedtls/library/ssl_tls.c	/^} tls_id_curve_name_table[] =$/;"	v	typeref:typename:const struct __anonf700f6870208[]
-tls_id_match_table	components/mbedtls/mbedtls/library/ssl_tls.c	/^} tls_id_match_table[] =$/;"	v	typeref:typename:const struct __anonf700f6870108[]
+tls13_label_prefix	components/mbedtls/mbedtls/library/ssl_tls13_keys.c	/^static const char tls13_label_prefix[6] MBEDTLS_ATTRIBUTE_UNTERMINATED_STRING = "tls13 ";$/;"	v	typeref:typename:const char[6]MBEDTLS_ATTRIBUTE_UNTERMINATED_STRING	file:
+tls_id_curve_name_table	components/mbedtls/mbedtls/library/ssl_tls.c	/^} tls_id_curve_name_table[] =$/;"	v	typeref:typename:const struct __anonf700f6870208[]	file:
+tls_id_match_table	components/mbedtls/mbedtls/library/ssl_tls.c	/^} tls_id_match_table[] =$/;"	v	typeref:typename:const struct __anonf700f6870108[]	file:
 tls_prf_generic	components/mbedtls/mbedtls/library/ssl_tls.c	/^static int tls_prf_generic(mbedtls_md_type_t md_type,$/;"	f	typeref:typename:MBEDTLS_CHECK_RETURN_CRITICAL int	file:
 tls_prf_get_type	components/mbedtls/mbedtls/library/ssl_tls.c	/^static mbedtls_tls_prf_types tls_prf_get_type(mbedtls_ssl_tls_prf_cb *tls_prf)$/;"	f	typeref:typename:mbedtls_tls_prf_types	file:
 tls_prf_sha256	components/mbedtls/mbedtls/library/ssl_tls.c	/^static int tls_prf_sha256(const unsigned char *secret, size_t slen,$/;"	f	typeref:typename:MBEDTLS_CHECK_RETURN_CRITICAL int	file:
