@@ -128,6 +128,7 @@ void bootloader_print_banner(void)
     ESP_EARLY_LOGI(TAG, "Multicore bootloader");
 #endif
 }
+#endif
 
 void bootloader_init_ext_mem(void)
 {

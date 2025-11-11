@@ -11,7 +11,9 @@
 #include "sdkconfig.h"
 #include "esp_check.h"
 #include "esp_log.h"
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
+#endif
 #include "esp_memory_utils.h"
 #include "soc/soc_caps.h"
 #include "hal/cache_hal.h"

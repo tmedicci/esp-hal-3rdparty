@@ -195,7 +195,7 @@ search_done:
     // release the helper power lock because we have finished setting up the sleep retention link
     sleep_retention_power_lock_release();
 #endif
-    (*ret_chan)->spinlock = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED;
+    INIT_CRIT_SECTION_LOCK_RUNTIME(&((*ret_chan)->spinlock));
     ESP_LOGD(TAG, "new %s channel (%d,%d) at %p", (config->direction == GDMA_CHANNEL_DIRECTION_TX) ? "tx" : "rx",
              group->group_id, pair->pair_id, *ret_chan);
     return ESP_OK;
@@ -744,7 +744,7 @@ static gdma_pair_t *gdma_acquire_pair_handle(gdma_group_t *group, int pair_id)
         // initialize pair before registering to avoid accessing uninitialized pair
         pair->group = group;
         pair->pair_id = pair_id;
-        pair->spinlock = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED;
+        INIT_CRIT_SECTION_LOCK_RUNTIME(&(pair->spinlock));
         // register the pair to the group
         group->pairs[pair_id] = pair;
     } else {
@@ -961,6 +961,14 @@ static esp_err_t gdma_install_rx_interrupt(gdma_rx_channel_t *rx_chan)
                                     gdma_default_rx_isr, rx_chan, &intr);
     ESP_GOTO_ON_ERROR(ret, err, TAG, "alloc interrupt failed");
     rx_chan->base.intr = intr;
+#else
+    int periph = gdma_periph_signals.groups[group->group_id].pairs[pair->pair_id].rx_irq_id;
+    int cpuint = esp_setup_irq(periph, 1, ESP_IRQ_TRIGGER_LEVEL);
+    ESP_RETURN_ON_ERROR(cpuint < 0 ? ESP_ERR_INVALID_ARG : ESP_OK, TAG, "enable interrupt failed");
+    int rx_irq = ESP_SOURCE2IRQ(periph);
+    ret = irq_attach(rx_irq, gdma_default_rx_isr, rx_chan);
+    ESP_GOTO_ON_ERROR(ret == OK ? ESP_OK : ESP_ERR_INVALID_ARG, err, TAG, "alloc interrupt failed");
+#endif
 
     esp_os_enter_critical(&pair->spinlock);
     gdma_hal_enable_intr(hal, pair_id, GDMA_CHANNEL_DIRECTION_RX, UINT32_MAX, false); // disable all interrupt events
@@ -994,6 +1002,14 @@ static esp_err_t gdma_install_tx_interrupt(gdma_tx_channel_t *tx_chan)
                                     gdma_default_tx_isr, tx_chan, &intr);
     ESP_GOTO_ON_ERROR(ret, err, TAG, "alloc interrupt failed");
     tx_chan->base.intr = intr;
+#else
+    int periph = gdma_periph_signals.groups[group->group_id].pairs[pair->pair_id].tx_irq_id;
+    int cpuint = esp_setup_irq(periph, 1, ESP_IRQ_TRIGGER_LEVEL);
+    ESP_RETURN_ON_ERROR(cpuint < 0 ? ESP_ERR_INVALID_ARG : ESP_OK, TAG, "enable interrupt failed");
+    int tx_irq = ESP_SOURCE2IRQ(periph);
+    ret = irq_attach(tx_irq, gdma_default_tx_isr, tx_chan);
+    ESP_GOTO_ON_ERROR(ret == OK ? ESP_OK : ESP_ERR_INVALID_ARG, err, TAG, "alloc interrupt failed");
+#endif
 
     esp_os_enter_critical(&pair->spinlock);
     gdma_hal_enable_intr(hal, pair_id, GDMA_CHANNEL_DIRECTION_TX, UINT32_MAX, false); // disable all interrupt events
