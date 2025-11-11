@@ -80,7 +80,7 @@ static struct irqstate_list_s g_int_flags[NR_IRQSTATE_FLAGS];
         sq_addlast((sq_entry_t *)irqstate, &g_int_flags_used); \
     } while(0)
 
-#define LEAVE_CRITICAL_SECTION(lock) do { \
+#define EXIT_CRITICAL_SECTION(lock) do { \
         struct irqstate_list_s *irqstate; \
         irqstate = (struct irqstate_list_s *)sq_remlast(&g_int_flags_used); \
         assert(irqstate != NULL); \
@@ -104,7 +104,7 @@ static struct irqstate_list_s g_int_flags[NR_IRQSTATE_FLAGS];
     sq_addlast((sq_entry_t *)irqstate, &g_int_flags_used); \
 } while(0)
 
-#define LEAVE_CRITICAL_SECTION(lock) do { \
+#define EXIT_CRITICAL_SECTION(lock) do { \
     struct irqstate_list_s *irqstate; \
     irqstate = (struct irqstate_list_s *)sq_remlast(&g_int_flags_used); \
     assert(irqstate != NULL); \

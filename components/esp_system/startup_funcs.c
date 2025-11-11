@@ -18,7 +18,6 @@
 #include "spi_flash_mmap.h"
 #include "esp_flash_internal.h"
 #include "esp_newlib.h"
-#endif
 #include "esp_xt_wdt.h"
 #include "esp_cpu.h"
 #include "esp_private/startup_internal.h"

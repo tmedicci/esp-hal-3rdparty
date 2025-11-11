@@ -25,7 +25,7 @@
 static spinlock_t __attribute__((unused)) periph_spinlock = SP_UNLOCKED;
 #else
 static portMUX_TYPE __attribute__((unused)) periph_spinlock = portMUX_INITIALIZER_UNLOCKED;
-
+#endif
 static uint8_t ref_counts[PERIPH_MODULE_MAX] = {0};
 
 void periph_rcc_enter(void)
