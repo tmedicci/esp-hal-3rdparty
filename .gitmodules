@@ -43,3 +43,6 @@
 [submodule "components/bt/esp_ble_mesh/lib/lib"]
 	path = components/bt/esp_ble_mesh/lib/lib
 	url = ../../espressif/esp-ble-mesh-lib.git
+[submodule "components/heap/tlsf"]
+	path = components/heap/tlsf
+	url = ../../espressif/tlsf.git
