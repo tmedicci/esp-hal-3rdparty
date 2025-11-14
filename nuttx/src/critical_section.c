@@ -18,7 +18,11 @@ static sq_queue_t g_int_flags_free;
 static sq_queue_t g_int_flags_used;
 static struct irqstate_list_s g_int_flags[NR_IRQSTATE_FLAGS];
 
-void esp_os_enter_critical(spinlock_t *lock)
+#if OS_SPINLOCK == 1
+void nuttx_enter_critical(spinlock_t *lock)
+#else
+void nuttx_enter_critical(void)
+#endif
 {
   if (!g_lock_initialized)
     {
@@ -35,15 +39,28 @@ void esp_os_enter_critical(spinlock_t *lock)
   struct irqstate_list_s *irqstate;
   irqstate = (struct irqstate_list_s *)sq_remlast(&g_int_flags_free);
   assert(irqstate != NULL);
+#if OS_SPINLOCK == 1
+  irqstate->flags = spin_lock_irqsave(lock);
+#else
   irqstate->flags = enter_critical_section();
+#endif
   sq_addlast((sq_entry_t *)irqstate, &g_int_flags_used);
 }
 
-void esp_os_exit_critical(spinlock_t *lock)
+#if OS_SPINLOCK == 1
+void nuttx_exit_critical(spinlock_t *lock)
+#else
+void nuttx_exit_critical(void)
+#endif
 {
   struct irqstate_list_s *irqstate;
   irqstate = (struct irqstate_list_s *)sq_remlast(&g_int_flags_used);
+#if OS_SPINLOCK == 1
+  assert(irqstate != NULL);
+  spin_unlock_irqrestore(lock, irqstate->flags);
+#else
   assert(irqstate != NULL);
   leave_critical_section(irqstate->flags);
+#endif
   sq_addlast((sq_entry_t *)irqstate, &g_int_flags_free);
 }
