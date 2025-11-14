@@ -24,6 +24,11 @@
 extern "C" {
 #endif
 
+#ifdef __NuttX__
+extern void esp_os_enter_critical(spinlock_t *lock);
+extern void esp_os_exit_critical(spinlock_t *lock);
+#endif
+
 /**
  * In theory, OS_SPINLOCK should only be defined in a multi-core environment, because critical-section-related
  * functions there take a lock as a parameter. In practice, since the Xtensa FreeRTOS port layer is the same
@@ -41,77 +46,6 @@ extern "C" {
 
 #if OS_SPINLOCK == 1
 typedef spinlock_t esp_os_spinlock_t;
-#endif
-
-#ifdef __NuttX__
-#include <nuttx/mutex.h>
-#include <nuttx/spinlock.h>
-#include <nuttx/irq.h>
-#include <nuttx/queue.h>
-
-#define NR_IRQSTATE_FLAGS   3
-
-struct irqstate_list_s
-{
-  struct irqstate_list_s *flink;
-  irqstate_t flags;
-};
-
-static bool g_lock_initialized = false;
-static sq_queue_t g_int_flags_free;
-static sq_queue_t g_int_flags_used;
-static struct irqstate_list_s g_int_flags[NR_IRQSTATE_FLAGS];
-
-#if OS_SPINLOCK == 1
-
-#define ENTER_CRITICAL_SECTION(lock) do { \
-        if (!g_lock_initialized) { \
-            sq_init(&g_int_flags_free); \
-            sq_init(&g_int_flags_used); \
-            for (int i = 0; i < NR_IRQSTATE_FLAGS; i++) { \
-                sq_addlast((sq_entry_t *)&g_int_flags[i], &g_int_flags_free); \
-            } \
-            g_lock_initialized = true; \
-        } \
-        struct irqstate_list_s *irqstate; \
-        irqstate = (struct irqstate_list_s *)sq_remlast(&g_int_flags_free); \
-        assert(irqstate != NULL); \
-        irqstate->flags = spin_lock_irqsave(lock); \
-        sq_addlast((sq_entry_t *)irqstate, &g_int_flags_used); \
-    } while(0)
-
-#define EXIT_CRITICAL_SECTION(lock) do { \
-        struct irqstate_list_s *irqstate; \
-        irqstate = (struct irqstate_list_s *)sq_remlast(&g_int_flags_used); \
-        assert(irqstate != NULL); \
-        spin_unlock_irqrestore((lock), irqstate->flags); \
-        sq_addlast((sq_entry_t *)irqstate, &g_int_flags_free); \
-    } while(0)
-#else
-#define ENTER_CRITICAL_SECTION(lock) do { \
-    if (!g_lock_initialized) { \
-        sq_init(&g_int_flags_free); \
-        sq_init(&g_int_flags_used); \
-        for (int i = 0; i < NR_IRQSTATE_FLAGS; i++) { \
-            sq_addlast((sq_entry_t *)&g_int_flags[i], &g_int_flags_free); \
-        } \
-        g_lock_initialized = true; \
-    } \
-    struct irqstate_list_s *irqstate; \
-    irqstate = (struct irqstate_list_s *)sq_remlast(&g_int_flags_free); \
-    assert(irqstate != NULL); \
-    irqstate->flags = enter_critical_section(); \
-    sq_addlast((sq_entry_t *)irqstate, &g_int_flags_used); \
-} while(0)
-
-#define EXIT_CRITICAL_SECTION(lock) do { \
-    struct irqstate_list_s *irqstate; \
-    irqstate = (struct irqstate_list_s *)sq_remlast(&g_int_flags_used); \
-    assert(irqstate != NULL); \
-    leave_critical_section(irqstate->flags); \
-    sq_addlast((sq_entry_t *)irqstate, &g_int_flags_free); \
-} while(0)
-#endif
 #endif
 
 /**
@@ -310,9 +244,7 @@ static struct irqstate_list_s g_int_flags[NR_IRQSTATE_FLAGS];
  * esp_os_exit_critical(&my_lock);
  * @endcode
  */
-#ifdef __NuttX__
-#define esp_os_enter_critical(lock)         ENTER_CRITICAL_SECTION(lock)
-#else
+#ifndef __NuttX__
 #if OS_SPINLOCK == 1
 #define esp_os_enter_critical(lock)         portENTER_CRITICAL(lock)
 #else
@@ -343,9 +275,7 @@ static struct irqstate_list_s g_int_flags[NR_IRQSTATE_FLAGS];
  * esp_os_exit_critical(&my_lock);
  * @endcode
  */
-#ifdef __NuttX__
-#define esp_os_exit_critical(lock)          EXIT_CRITICAL_SECTION(lock)
-#else
+#ifndef __NuttX__
 #if OS_SPINLOCK == 1
 #define esp_os_exit_critical(lock)          portEXIT_CRITICAL(lock)
 #else
@@ -377,7 +307,7 @@ static struct irqstate_list_s g_int_flags[NR_IRQSTATE_FLAGS];
  * @endcode
  */
 #ifdef __NuttX__
-#define esp_os_enter_critical_isr(lock)     ENTER_CRITICAL_SECTION(lock)
+#define esp_os_enter_critical_isr(lock)     esp_os_enter_critical(lock)
 #else
 #if OS_SPINLOCK == 1
 #define esp_os_enter_critical_isr(lock)     portENTER_CRITICAL_ISR(lock)
@@ -409,7 +339,7 @@ static struct irqstate_list_s g_int_flags[NR_IRQSTATE_FLAGS];
  * @endcode
  */
 #ifdef __NuttX__
-#define esp_os_exit_critical_isr(lock)      EXIT_CRITICAL_SECTION(lock)
+#define esp_os_exit_critical_isr(lock)      esp_os_exit_critical(lock)
 #else
 #if OS_SPINLOCK == 1
 #define esp_os_exit_critical_isr(lock)      portEXIT_CRITICAL_ISR(lock)
@@ -443,7 +373,7 @@ static struct irqstate_list_s g_int_flags[NR_IRQSTATE_FLAGS];
  * @endcode
  */
 #ifdef __NuttX__
-#define esp_os_enter_critical_safe(lock)    ENTER_CRITICAL_SECTION(lock)
+#define esp_os_enter_critical_safe(lock)    esp_os_enter_critical(lock)
 #else
 #if OS_SPINLOCK == 1
 #define esp_os_enter_critical_safe(lock)    portENTER_CRITICAL_SAFE(lock)
@@ -476,7 +406,7 @@ static struct irqstate_list_s g_int_flags[NR_IRQSTATE_FLAGS];
  * @endcode
  */
 #ifdef __NuttX__
-#define esp_os_exit_critical_safe(lock)    EXIT_CRITICAL_SECTION(lock)
+#define esp_os_exit_critical_safe(lock)    esp_os_exit_critical(lock)
 #else
 #if OS_SPINLOCK == 1
 #define esp_os_exit_critical_safe(lock)     portEXIT_CRITICAL_SAFE(lock)
