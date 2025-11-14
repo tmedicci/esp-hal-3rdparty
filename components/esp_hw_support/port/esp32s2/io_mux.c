@@ -15,7 +15,6 @@
 #include "esp_private/critical_section.h"
 #include "hal/rtc_io_ll.h"
 
-#ifndef __NuttX__
 #define RTCIO_RCC_ATOMIC() \
     for (int _rc_cnt = 1; \
     _rc_cnt ? (esp_os_enter_critical(&rtc_spinlock), 1) : 0;     \
