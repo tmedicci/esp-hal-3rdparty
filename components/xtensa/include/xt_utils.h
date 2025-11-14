@@ -16,11 +16,7 @@
 #include <arch/xtensa/core.h>
 #endif
 #include "xtensa/config/extreg.h"
-#ifndef __NuttX__
 #include "xtensa/config/xt_specreg.h"
-#else
-#include <arch/xtensa/xtensa_specregs.h>
-#endif
 #include "xtensa/xtruntime.h"
 #include "xt_instr_macros.h"
 #include "esp_bit_defs.h"
