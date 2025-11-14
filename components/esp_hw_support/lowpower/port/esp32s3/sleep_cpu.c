@@ -18,6 +18,9 @@
 #ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#else
+#include "xtensa_context.h"
+#endif
 #include "esp_heap_caps.h"
 #endif
 #include "soc/rtc_periph.h"

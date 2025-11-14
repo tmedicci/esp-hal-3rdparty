@@ -6,8 +6,17 @@
 
 #include "esp_system.h"
 #include "esp_private/system_internal.h"
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#endif
+#if CONFIG_ESP_SYSTEM_MEMPROT_FEATURE
+#if CONFIG_IDF_TARGET_ESP32S2
+#include "esp32s2/memprot.h"
+#else
+#include "esp_memprot.h"
+#endif
+#endif
 
 #define SHUTDOWN_HANDLERS_NO 5
 
@@ -37,6 +46,7 @@ esp_err_t esp_unregister_shutdown_handler(shutdown_handler_t handler)
     return ESP_ERR_INVALID_STATE;
 }
 
+#ifndef __NuttX__
 void esp_restart(void)
 {
     for (int i = SHUTDOWN_HANDLERS_NO - 1; i >= 0; i--) {
@@ -55,3 +65,4 @@ void esp_restart(void)
 
     esp_restart_noos();
 }
+#endif
