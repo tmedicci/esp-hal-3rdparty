@@ -24,16 +24,6 @@
 extern "C" {
 #endif
 
-#ifdef __NuttX__
-#if OS_SPINLOCK == 1
-extern void nuttx_enter_critical(spinlock_t *lock);
-extern void nuttx_exit_critical(spinlock_t *lock);
-#else
-extern void nuttx_enter_critical(void);
-extern void nuttx_exit_critical(void);
-#endif
-#endif
-
 /**
  * In theory, OS_SPINLOCK should only be defined in a multi-core environment, because critical-section-related
  * functions there take a lock as a parameter. In practice, since the Xtensa FreeRTOS port layer is the same
@@ -51,6 +41,10 @@ extern void nuttx_exit_critical(void);
 
 #ifdef __NuttX__
 #if OS_SPINLOCK == 1
+
+extern void nuttx_enter_critical(spinlock_t *lock);
+extern void nuttx_exit_critical(spinlock_t *lock);
+
 #define portENTER_CRITICAL(lock) nuttx_enter_critical(lock)
 #define portEXIT_CRITICAL(lock) nuttx_exit_critical(lock)
 #define portENTER_CRITICAL_ISR(lock) nuttx_enter_critical(lock)
@@ -58,6 +52,10 @@ extern void nuttx_exit_critical(void);
 #define portENTER_CRITICAL_SAFE(lock) nuttx_enter_critical(lock)
 #define portEXIT_CRITICAL_SAFE(lock) nuttx_exit_critical(lock)
 #else
+
+extern void nuttx_enter_critical(void);
+extern void nuttx_exit_critical(void);
+
 #define vPortEnterCritical() nuttx_enter_critical()
 #define vPortExitCritical() nuttx_exit_critical()
 #endif
