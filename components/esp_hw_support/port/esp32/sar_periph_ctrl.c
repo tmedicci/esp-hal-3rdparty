@@ -25,7 +25,7 @@
 ESP_LOG_ATTR_TAG(TAG, "sar_periph_ctrl");
 
 #ifdef __NuttX__
-static spinlock_t rtc_spinlock;
+extern spinlock_t rtc_spinlock;
 #else
 extern portMUX_TYPE rtc_spinlock;
 #endif
