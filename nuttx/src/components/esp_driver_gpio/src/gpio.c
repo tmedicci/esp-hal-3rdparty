@@ -24,7 +24,7 @@
 
 static const char *GPIO_TAG = "gpio";
 
-#ifdef CONFIG_ARCH_CHIP_ESP32C3_GENERIC
+#ifdef CONFIG_IDF_TARGET_ESP32C3
 #define SOC_GPIO_SUPPORT_RTC_INDEPENDENT 0
 #endif
 
