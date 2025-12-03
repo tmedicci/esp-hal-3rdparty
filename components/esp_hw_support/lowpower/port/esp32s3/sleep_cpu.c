@@ -22,7 +22,6 @@
 #include "xtensa_context.h"
 #endif
 #include "esp_heap_caps.h"
-#endif
 #include "soc/rtc_periph.h"
 #include "soc/soc_caps.h"
 #include "esp_private/sleep_cpu.h"

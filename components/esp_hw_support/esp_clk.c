@@ -110,7 +110,7 @@ int IRAM_ATTR esp_clk_xtal_freq(void)
 uint64_t esp_rtc_get_time_us(void)
 {
 #if !(defined(__NuttX__) && defined(CONFIG_IDF_TARGET_ESP32S2))
-    ENTER_CRITICAL_SECTION(&s_esp_rtc_time_lock);
+    esp_os_enter_critical(&s_esp_rtc_time_lock);
 #endif
     const uint32_t cal = esp_clk_slowclk_cal_get();
 #if SOC_RTC_MEM_SUPPORTED
