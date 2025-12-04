@@ -882,6 +882,8 @@
 #  define CONFIG_BOOTLOADER_FLASH_XMC_SUPPORT   1
 #endif
 
+#define CONFIG_FREERTOS_NUMBER_OF_CORES 1
+
 /* List of deprecated options */
 
 #define CONFIG_CONSOLE_UART                                 CONFIG_ESP_CONSOLE_UART
