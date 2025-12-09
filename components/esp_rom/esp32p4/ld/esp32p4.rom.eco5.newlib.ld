@@ -76,17 +76,21 @@ div = 0x4fc0033c;
 labs = 0x4fc00340;
 ldiv = 0x4fc00344;
 qsort = 0x4fc00348;
+#ifndef  __NuttX__
 rand_r = 0x4fc0034c;
 rand = 0x4fc00350;
 srand = 0x4fc00354;
+#endif
 utoa = 0x4fc00358;
 itoa = 0x4fc0035c;
 atoi = 0x4fc00360;
 atol = 0x4fc00364;
 strtol = 0x4fc00368;
 strtoul = 0x4fc0036c;
+#ifndef __NuttX__
 fflush = 0x4fc00370;
 _fflush_r = 0x4fc00374;
+#endif
 _fwalk = 0x4fc00378;
 _fwalk_reent = 0x4fc0037c;
 __smakebuf_r = 0x4fc00380;
