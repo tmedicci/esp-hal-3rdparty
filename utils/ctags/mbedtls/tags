@@ -102,7 +102,7 @@ MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/chachapoly.h	/^    ui
 MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^    const char *MBEDTLS_PRIVATE(name);$/;"	p	struct:mbedtls_cipher_info_t	typeref:typename:const char *
 MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^    const mbedtls_cipher_info_t *MBEDTLS_PRIVATE(cipher_info);$/;"	p	struct:mbedtls_cipher_context_t	typeref:typename:const mbedtls_cipher_info_t *
 MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^    int MBEDTLS_PRIVATE(key_bitlen);$/;"	p	struct:mbedtls_cipher_context_t	typeref:typename:int
-MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^    int(*MBEDTLS_PRIVATE(get_padding))(unsigned char *input, size_t ilen, size_t *data_len);$/;"	p	struct:mbedtls_cipher_context_t	typeref:typename:int (*)(unsigned char * input,size_t ilen,size_t * data_len)
+MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^    int(*MBEDTLS_PRIVATE(get_padding))(unsigned char *input, size_t ilen,$/;"	p	struct:mbedtls_cipher_context_t	typeref:typename:int (*)(unsigned char * input,size_t ilen,size_t * data_len,size_t * invalid_padding)
 MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^    mbedtls_cmac_context_t *MBEDTLS_PRIVATE(cmac_ctx);$/;"	p	struct:mbedtls_cipher_context_t	typeref:typename:mbedtls_cmac_context_t *
 MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^    mbedtls_operation_t MBEDTLS_PRIVATE(operation);$/;"	p	struct:mbedtls_cipher_context_t	typeref:typename:mbedtls_operation_t
 MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^    size_t MBEDTLS_PRIVATE(iv_size);$/;"	p	struct:mbedtls_cipher_context_t	typeref:typename:size_t
@@ -118,7 +118,7 @@ MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^    unsign
 MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^    unsigned int MBEDTLS_PRIVATE(mode) : 4;$/;"	p	struct:mbedtls_cipher_info_t	typeref:typename:unsigned int
 MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^    unsigned int MBEDTLS_PRIVATE(type) : 8;$/;"	p	struct:mbedtls_cipher_info_t	typeref:typename:unsigned int
 MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^    void *MBEDTLS_PRIVATE(cipher_ctx);$/;"	p	struct:mbedtls_cipher_context_t	typeref:typename:void *
-MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^    void(*MBEDTLS_PRIVATE(add_padding))(unsigned char *output, size_t olen, size_t data_len);$/;"	p	struct:mbedtls_cipher_context_t	typeref:typename:void (*)(unsigned char * output,size_t olen,size_t data_len)
+MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^    void(*MBEDTLS_PRIVATE(add_padding))(unsigned char *output, size_t olen,$/;"	p	struct:mbedtls_cipher_context_t	typeref:typename:void (*)(unsigned char * output,size_t olen,size_t data_len)
 MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cmac.h	/^    size_t              MBEDTLS_PRIVATE(unprocessed_len);$/;"	p	struct:mbedtls_cmac_context_t	typeref:typename:size_t
 MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cmac.h	/^    unsigned char       MBEDTLS_PRIVATE(state)[MBEDTLS_CMAC_MAX_BLOCK_SIZE];$/;"	p	struct:mbedtls_cmac_context_t	typeref:typename:unsigned char
 MBEDTLS_PRIVATE	components/mbedtls/mbedtls/include/mbedtls/cmac.h	/^    unsigned char       MBEDTLS_PRIVATE(unprocessed_block)[MBEDTLS_CMAC_MAX_BLOCK_SIZE];$/;"	p	struct:mbedtls_cmac_context_t	typeref:typename:unsigned char
@@ -1886,6 +1886,8 @@ mbedtls_cipher_definitions	components/mbedtls/mbedtls/library/cipher_wrap.c	/^co
 mbedtls_cipher_error_from_psa	components/mbedtls/mbedtls/library/block_cipher.c	/^static int mbedtls_cipher_error_from_psa(psa_status_t status)$/;"	f	typeref:typename:int	file:
 mbedtls_cipher_finish	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^int mbedtls_cipher_finish(mbedtls_cipher_context_t *ctx,$/;"	p	typeref:typename:int
 mbedtls_cipher_finish	components/mbedtls/mbedtls/library/cipher.c	/^int mbedtls_cipher_finish(mbedtls_cipher_context_t *ctx,$/;"	f	typeref:typename:int
+mbedtls_cipher_finish_padded	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^int mbedtls_cipher_finish_padded(mbedtls_cipher_context_t *ctx,$/;"	p	typeref:typename:int
+mbedtls_cipher_finish_padded	components/mbedtls/mbedtls/library/cipher.c	/^int mbedtls_cipher_finish_padded(mbedtls_cipher_context_t *ctx,$/;"	f	typeref:typename:int
 mbedtls_cipher_free	components/mbedtls/mbedtls/include/mbedtls/cipher.h	/^void mbedtls_cipher_free(mbedtls_cipher_context_t *ctx);$/;"	p	typeref:typename:void
 mbedtls_cipher_free	components/mbedtls/mbedtls/library/cipher.c	/^void mbedtls_cipher_free(mbedtls_cipher_context_t *ctx)$/;"	f	typeref:typename:void
 mbedtls_cipher_get_base	components/mbedtls/mbedtls/library/cipher.c	/^static inline const mbedtls_cipher_base_t *mbedtls_cipher_get_base($/;"	f	typeref:typename:const mbedtls_cipher_base_t *	file:
@@ -2667,6 +2669,8 @@ mbedtls_mpi_core_cond_swap	components/mbedtls/mbedtls/library/bignum_core.c	/^vo
 mbedtls_mpi_core_cond_swap	components/mbedtls/mbedtls/library/bignum_core.h	/^void mbedtls_mpi_core_cond_swap(mbedtls_mpi_uint *X,$/;"	p	typeref:typename:void
 mbedtls_mpi_core_ct_uint_table_lookup	components/mbedtls/mbedtls/library/bignum_core.c	/^void mbedtls_mpi_core_ct_uint_table_lookup(mbedtls_mpi_uint *dest,$/;"	f	typeref:typename:MBEDTLS_STATIC_TESTABLE void
 mbedtls_mpi_core_ct_uint_table_lookup	components/mbedtls/mbedtls/library/bignum_core.h	/^void mbedtls_mpi_core_ct_uint_table_lookup(mbedtls_mpi_uint *dest,$/;"	p	typeref:typename:void
+mbedtls_mpi_core_div2_mod_odd	components/mbedtls/mbedtls/library/bignum_core.c	/^void mbedtls_mpi_core_div2_mod_odd(mbedtls_mpi_uint *X,$/;"	f	typeref:typename:MBEDTLS_STATIC_TESTABLE void
+mbedtls_mpi_core_div2_mod_odd	components/mbedtls/mbedtls/library/bignum_core_invasive.h	/^void mbedtls_mpi_core_div2_mod_odd(mbedtls_mpi_uint *X,$/;"	p	typeref:typename:MBEDTLS_STATIC_TESTABLE void
 mbedtls_mpi_core_exp_mod	components/mbedtls/mbedtls/library/bignum_core.c	/^void mbedtls_mpi_core_exp_mod(mbedtls_mpi_uint *X,$/;"	f	typeref:typename:void
 mbedtls_mpi_core_exp_mod	components/mbedtls/mbedtls/library/bignum_core.h	/^void mbedtls_mpi_core_exp_mod(mbedtls_mpi_uint *X,$/;"	p	typeref:typename:void
 mbedtls_mpi_core_exp_mod_optionally_safe	components/mbedtls/mbedtls/library/bignum_core.c	/^static void mbedtls_mpi_core_exp_mod_optionally_safe(mbedtls_mpi_uint *X,$/;"	f	typeref:typename:void	file:
@@ -2678,6 +2682,8 @@ mbedtls_mpi_core_fill_random	components/mbedtls/mbedtls/library/bignum_core.c	/^
 mbedtls_mpi_core_fill_random	components/mbedtls/mbedtls/library/bignum_core.h	/^int mbedtls_mpi_core_fill_random(mbedtls_mpi_uint *X, size_t X_limbs,$/;"	p	typeref:typename:int
 mbedtls_mpi_core_from_mont_rep	components/mbedtls/mbedtls/library/bignum_core.c	/^void mbedtls_mpi_core_from_mont_rep(mbedtls_mpi_uint *X,$/;"	f	typeref:typename:void
 mbedtls_mpi_core_from_mont_rep	components/mbedtls/mbedtls/library/bignum_core.h	/^void mbedtls_mpi_core_from_mont_rep(mbedtls_mpi_uint *X,$/;"	p	typeref:typename:void
+mbedtls_mpi_core_gcd_modinv_odd	components/mbedtls/mbedtls/library/bignum_core.c	/^void mbedtls_mpi_core_gcd_modinv_odd(mbedtls_mpi_uint *G,$/;"	f	typeref:typename:void
+mbedtls_mpi_core_gcd_modinv_odd	components/mbedtls/mbedtls/library/bignum_core.h	/^void mbedtls_mpi_core_gcd_modinv_odd(mbedtls_mpi_uint *G,$/;"	p	typeref:typename:void
 mbedtls_mpi_core_get_mont_r2_unsafe	components/mbedtls/mbedtls/library/bignum_core.c	/^int mbedtls_mpi_core_get_mont_r2_unsafe(mbedtls_mpi *X,$/;"	f	typeref:typename:int
 mbedtls_mpi_core_get_mont_r2_unsafe	components/mbedtls/mbedtls/library/bignum_core.h	/^int mbedtls_mpi_core_get_mont_r2_unsafe(mbedtls_mpi *X,$/;"	p	typeref:typename:int
 mbedtls_mpi_core_lt_ct	components/mbedtls/mbedtls/library/bignum_core.c	/^mbedtls_ct_condition_t mbedtls_mpi_core_lt_ct(const mbedtls_mpi_uint *A,$/;"	f	typeref:typename:mbedtls_ct_condition_t
@@ -2728,6 +2734,8 @@ mbedtls_mpi_free	components/mbedtls/mbedtls/include/mbedtls/bignum.h	/^void mbed
 mbedtls_mpi_free	components/mbedtls/mbedtls/library/bignum.c	/^void mbedtls_mpi_free(mbedtls_mpi *X)$/;"	f	typeref:typename:void
 mbedtls_mpi_gcd	components/mbedtls/mbedtls/include/mbedtls/bignum.h	/^int mbedtls_mpi_gcd(mbedtls_mpi *G, const mbedtls_mpi *A,$/;"	p	typeref:typename:int
 mbedtls_mpi_gcd	components/mbedtls/mbedtls/library/bignum.c	/^int mbedtls_mpi_gcd(mbedtls_mpi *G, const mbedtls_mpi *A, const mbedtls_mpi *B)$/;"	f	typeref:typename:int
+mbedtls_mpi_gcd_modinv_odd	components/mbedtls/mbedtls/library/bignum.c	/^int mbedtls_mpi_gcd_modinv_odd(mbedtls_mpi *G,$/;"	f	typeref:typename:int
+mbedtls_mpi_gcd_modinv_odd	components/mbedtls/mbedtls/library/bignum_internal.h	/^int mbedtls_mpi_gcd_modinv_odd(mbedtls_mpi *G,$/;"	p	typeref:typename:int
 mbedtls_mpi_gen_prime	components/mbedtls/mbedtls/include/mbedtls/bignum.h	/^int mbedtls_mpi_gen_prime(mbedtls_mpi *X, size_t nbits, int flags,$/;"	p	typeref:typename:int
 mbedtls_mpi_gen_prime	components/mbedtls/mbedtls/library/bignum.c	/^int mbedtls_mpi_gen_prime(mbedtls_mpi *X, size_t nbits, int flags,$/;"	f	typeref:typename:int
 mbedtls_mpi_get_bit	components/mbedtls/mbedtls/include/mbedtls/bignum.h	/^int mbedtls_mpi_get_bit(const mbedtls_mpi *X, size_t pos);$/;"	p	typeref:typename:int
@@ -2738,6 +2746,11 @@ mbedtls_mpi_init	components/mbedtls/mbedtls/include/mbedtls/bignum.h	/^void mbed
 mbedtls_mpi_init	components/mbedtls/mbedtls/library/bignum.c	/^void mbedtls_mpi_init(mbedtls_mpi *X)$/;"	f	typeref:typename:void
 mbedtls_mpi_inv_mod	components/mbedtls/mbedtls/include/mbedtls/bignum.h	/^int mbedtls_mpi_inv_mod(mbedtls_mpi *X, const mbedtls_mpi *A,$/;"	p	typeref:typename:int
 mbedtls_mpi_inv_mod	components/mbedtls/mbedtls/library/bignum.c	/^int mbedtls_mpi_inv_mod(mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi *N)$/;"	f	typeref:typename:int
+mbedtls_mpi_inv_mod_even	components/mbedtls/mbedtls/library/bignum.c	/^static int mbedtls_mpi_inv_mod_even(mbedtls_mpi *X,$/;"	f	typeref:typename:int	file:
+mbedtls_mpi_inv_mod_even_in_range	components/mbedtls/mbedtls/library/bignum.c	/^int mbedtls_mpi_inv_mod_even_in_range(mbedtls_mpi *X,$/;"	f	typeref:typename:int
+mbedtls_mpi_inv_mod_even_in_range	components/mbedtls/mbedtls/library/bignum_internal.h	/^int mbedtls_mpi_inv_mod_even_in_range(mbedtls_mpi *X,$/;"	p	typeref:typename:int
+mbedtls_mpi_inv_mod_odd	components/mbedtls/mbedtls/library/bignum.c	/^int mbedtls_mpi_inv_mod_odd(mbedtls_mpi *X,$/;"	f	typeref:typename:int
+mbedtls_mpi_inv_mod_odd	components/mbedtls/mbedtls/library/bignum_internal.h	/^int mbedtls_mpi_inv_mod_odd(mbedtls_mpi *X,$/;"	p	typeref:typename:int
 mbedtls_mpi_is_prime_ext	components/mbedtls/mbedtls/include/mbedtls/bignum.h	/^int mbedtls_mpi_is_prime_ext(const mbedtls_mpi *X, int rounds,$/;"	p	typeref:typename:int
 mbedtls_mpi_is_prime_ext	components/mbedtls/mbedtls/library/bignum.c	/^int mbedtls_mpi_is_prime_ext(const mbedtls_mpi *X, int rounds,$/;"	f	typeref:typename:int
 mbedtls_mpi_lsb	components/mbedtls/mbedtls/include/mbedtls/bignum.h	/^size_t mbedtls_mpi_lsb(const mbedtls_mpi *X);$/;"	p	typeref:typename:size_t
@@ -2854,6 +2867,7 @@ mbedtls_mpi_sub_mpi	components/mbedtls/mbedtls/include/mbedtls/bignum.h	/^int mb
 mbedtls_mpi_sub_mpi	components/mbedtls/mbedtls/library/bignum.c	/^int mbedtls_mpi_sub_mpi(mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi *B)$/;"	f	typeref:typename:int
 mbedtls_mpi_swap	components/mbedtls/mbedtls/include/mbedtls/bignum.h	/^void mbedtls_mpi_swap(mbedtls_mpi *X, mbedtls_mpi *Y);$/;"	p	typeref:typename:void
 mbedtls_mpi_swap	components/mbedtls/mbedtls/library/bignum.c	/^void mbedtls_mpi_swap(mbedtls_mpi *X, mbedtls_mpi *Y)$/;"	f	typeref:typename:void
+mbedtls_mpi_uint_ctz	components/mbedtls/mbedtls/library/bignum.c	/^static size_t mbedtls_mpi_uint_ctz(mbedtls_mpi_uint x)$/;"	f	typeref:typename:size_t	file:
 mbedtls_mpi_write_binary	components/mbedtls/mbedtls/include/mbedtls/bignum.h	/^int mbedtls_mpi_write_binary(const mbedtls_mpi *X, unsigned char *buf,$/;"	p	typeref:typename:int
 mbedtls_mpi_write_binary	components/mbedtls/mbedtls/library/bignum.c	/^int mbedtls_mpi_write_binary(const mbedtls_mpi *X,$/;"	f	typeref:typename:int
 mbedtls_mpi_write_binary_le	components/mbedtls/mbedtls/include/mbedtls/bignum.h	/^int mbedtls_mpi_write_binary_le(const mbedtls_mpi *X,$/;"	p	typeref:typename:int
@@ -4470,6 +4484,7 @@ memset_func	components/mbedtls/mbedtls/library/platform_util.c	/^static void *(*
 mgf_mask	components/mbedtls/mbedtls/library/rsa.c	/^static int mgf_mask(unsigned char *dst, size_t dlen, unsigned char *src,$/;"	f	typeref:typename:int	file:
 mpi_bigendian_to_host	components/mbedtls/mbedtls/library/bignum_core.c	/^static mbedtls_mpi_uint mpi_bigendian_to_host(mbedtls_mpi_uint a)$/;"	f	typeref:typename:mbedtls_mpi_uint	file:
 mpi_check_small_factors	components/mbedtls/mbedtls/library/bignum.c	/^static int mpi_check_small_factors(const mbedtls_mpi *X)$/;"	f	typeref:typename:int	file:
+mpi_core_sub_mod	components/mbedtls/mbedtls/library/bignum_core.c	/^static void mpi_core_sub_mod(mbedtls_mpi_uint *X,$/;"	f	typeref:typename:void	file:
 mpi_free_many	components/mbedtls/mbedtls/library/ecp.c	/^static void mpi_free_many(mbedtls_mpi *arr, size_t size)$/;"	f	typeref:typename:void	file:
 mpi_get_digit	components/mbedtls/mbedtls/library/bignum.c	/^static int mpi_get_digit(mbedtls_mpi_uint *d, int radix, char c)$/;"	f	typeref:typename:int	file:
 mpi_init_many	components/mbedtls/mbedtls/library/ecp.c	/^static void mpi_init_many(mbedtls_mpi *arr, size_t size)$/;"	f	typeref:typename:void	file:
@@ -4610,7 +4625,6 @@ psa_allocate_volatile_key_slot	components/mbedtls/mbedtls/library/psa_crypto_slo
 psa_asymmetric_decrypt	components/mbedtls/mbedtls/library/psa_crypto.c	/^psa_status_t psa_asymmetric_decrypt(mbedtls_svc_key_id_t key,$/;"	f	typeref:typename:psa_status_t
 psa_asymmetric_encrypt	components/mbedtls/mbedtls/library/psa_crypto.c	/^psa_status_t psa_asymmetric_encrypt(mbedtls_svc_key_id_t key,$/;"	f	typeref:typename:psa_status_t
 psa_can_do_cipher	components/mbedtls/mbedtls/library/psa_crypto.c	/^int psa_can_do_cipher(psa_key_type_t key_type, psa_algorithm_t cipher_alg)$/;"	f	typeref:typename:int
-psa_can_do_cipher	components/mbedtls/mbedtls/library/psa_crypto_core.h	/^int psa_can_do_cipher(psa_key_type_t key_type, psa_algorithm_t cipher_alg);$/;"	p	typeref:typename:int
 psa_can_do_hash	components/mbedtls/mbedtls/library/psa_crypto.c	/^int psa_can_do_hash(psa_algorithm_t hash_alg)$/;"	f	typeref:typename:int
 psa_check_rsa_key_byte_aligned	components/mbedtls/mbedtls/library/psa_crypto_rsa.c	/^static psa_status_t psa_check_rsa_key_byte_aligned($/;"	f	typeref:typename:psa_status_t	file:
 psa_cipher_abort	components/mbedtls/mbedtls/library/psa_crypto.c	/^psa_status_t psa_cipher_abort(psa_cipher_operation_t *operation)$/;"	f	typeref:typename:psa_status_t
