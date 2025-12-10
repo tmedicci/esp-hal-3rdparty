@@ -25,7 +25,9 @@
 #include "hal/wdt_hal.h"
 #include "hal/uart_types.h"
 #include "hal/uart_ll.h"
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
+#endif
 
 #if CONFIG_SW_COEXIST_ENABLE || CONFIG_EXTERNAL_COEX_ENABLE
 #include "private/esp_coexist_internal.h"

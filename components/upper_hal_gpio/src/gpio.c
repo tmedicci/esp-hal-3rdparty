@@ -6,7 +6,9 @@
 
 #include <esp_types.h>
 #include "esp_err.h"
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
+#endif
 #include "esp_heap_caps.h"
 #include "sdkconfig.h"
 #include "driver/gpio.h"
@@ -22,6 +24,7 @@
 #include "hal/gpio_hal.h"
 #include "esp_private/esp_gpio_reserve.h"
 #include "esp_private/io_mux.h"
+#include "esp_private/critical_section.h"
 
 #if (SOC_RTCIO_PIN_COUNT > 0)
 #include "hal/rtc_io_hal.h"
@@ -38,6 +41,10 @@ static const char *GPIO_TAG = "gpio";
 #define GPIO_RTCIO_ARE_INDEPENDENT 0
 #else // for any other target has RTC_IO (LP_IOMUX) registers
 #define GPIO_RTCIO_ARE_INDEPENDENT 1
+#endif
+
+#ifdef __NuttX__
+#  define xPortGetCoreID     this_cpu
 #endif
 
 typedef struct {
@@ -57,7 +64,7 @@ typedef struct {
 
 typedef struct {
     gpio_hal_context_t *gpio_hal;
-    portMUX_TYPE gpio_spinlock;
+    DECLARE_CRIT_SECTION_LOCK_IN_STRUCT(gpio_spinlock)
     uint32_t isr_core_id;
     gpio_isr_func_t *gpio_isr_func;
     gpio_isr_handle_t gpio_isr_handle;
@@ -70,7 +77,7 @@ static gpio_hal_context_t _gpio_hal = {
 
 static gpio_context_t gpio_context = {
     .gpio_hal = &_gpio_hal,
-    .gpio_spinlock = portMUX_INITIALIZER_UNLOCKED,
+    INIT_CRIT_SECTION_LOCK_IN_STRUCT(gpio_spinlock)
     .isr_core_id = GPIO_ISR_CORE_ID_UNINIT,
     .gpio_isr_func = NULL,
     .isr_clr_on_entry_mask = 0,
