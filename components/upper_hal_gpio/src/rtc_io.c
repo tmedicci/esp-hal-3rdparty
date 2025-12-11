@@ -33,8 +33,8 @@ extern spinlock_t rtc_spinlock;
 #else
 extern portMUX_TYPE rtc_spinlock; //TODO: Will be placed in the appropriate position after the rtc module is finished.
 #endif
-#define RTCIO_ENTER_CRITICAL()  portENTER_CRITICAL(&rtc_spinlock)
-#define RTCIO_EXIT_CRITICAL()  portEXIT_CRITICAL(&rtc_spinlock)
+#define RTCIO_ENTER_CRITICAL()  esp_os_enter_critical(&rtc_spinlock)
+#define RTCIO_EXIT_CRITICAL()  esp_os_exit_critical(&rtc_spinlock)
 
 bool rtc_gpio_is_valid_gpio(gpio_num_t gpio_num)
 {
