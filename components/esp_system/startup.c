@@ -185,10 +185,8 @@ static void start_cpu0_default(void)
 #ifdef CONFIG_COMPILER_CXX_EXCEPTIONS
     __do_global_ctors_1();
 #endif
-//TODO: remove this and implement a stub for NuttX
-#ifndef __NuttX__
+
     __libc_init_array();
-#endif
 
     /* ----------------------------------Separator-----------------------------
      * After this stage, other CPU start running with the cache, however the scheduler (and ipc service) is not available.
