@@ -62,7 +62,9 @@ isalnum = 0x400078d8;
 isalpha = 0x400078e8;
 isdigit = 0x40007930;
 islower = 0x40007948;
+#ifndef __NuttX__
 isspace = 0x400079ac;
+#endif
 isupper = 0x400079c4;
 strcoll = 0x40007ce8;
 strlwr = 0x40007e68;
