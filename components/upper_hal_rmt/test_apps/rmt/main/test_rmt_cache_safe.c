@@ -114,7 +114,7 @@ typedef struct {
 IRAM_ATTR
 static bool test_rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data)
 {
-    BaseType_t high_task_wakeup = pdFALSE;
+    OS_BASE_TYPE high_task_wakeup = OS_FALSE;
     test_rx_user_data_t *test_user_data = (test_rx_user_data_t *)user_data;
     test_user_data->received_symbol_num += edata->num_symbols;
     // should receive one RMT symbol at a time
@@ -125,7 +125,7 @@ static bool test_rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx
             rmt_receive(channel, test_user_data->remote_codes, test_user_data->remote_codes_mem_size, &test_user_data->rx_config);
         }
     }
-    return high_task_wakeup == pdTRUE;
+    return high_task_wakeup == OS_TRUE;
 }
 
 static void test_rmt_rx_cache_safe(size_t mem_block_symbols, bool with_dma, rmt_clock_source_t clk_src)
@@ -180,7 +180,7 @@ static void test_rmt_rx_cache_safe(size_t mem_block_symbols, bool with_dma, rmt_
     // disable the flash cache, and simulate input signal by GPIO
     unity_utils_run_cache_disable_stub(test_simulate_input_post_cache_disable, TEST_RMT_GPIO_NUM_A);
 
-    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(1000)));
+    TEST_ASSERT_NOT_EQUAL(0, ulTaskNotifyTake(OS_FALSE, pdMS_TO_TICKS(1000)));
     TEST_ASSERT_EQUAL(TEST_RMT_SYMBOLS, test_user_data.received_symbol_num);
 
     printf("disable rx channels\r\n");
