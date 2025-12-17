@@ -26,7 +26,12 @@ struct irq_adpt
   void *arg;                /* Interrupt private data */
 };
 
+typedef struct esp_os_intr_handle_t
+{
+  intr_handle_t handle;
+  int irq;
+} esp_os_intr_handle_t;
+
 typedef struct mq_adpt *esp_os_queue_handle_t;
 typedef uint32_t esp_os_tick_type_t;
-typedef intr_handle_t esp_os_intr_handle_t;
 typedef intr_handler_t esp_os_intr_handler_t;

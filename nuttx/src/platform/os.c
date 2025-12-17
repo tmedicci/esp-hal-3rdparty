@@ -18,11 +18,6 @@
 
 #define OS_PORT_MAX_DELAY      0xfffffffful
 
-struct intr_handle_data_t
-{
-  int irq;
-};
-
 static esp_err_t esp_os_queue_send_generic(esp_os_queue_handle_t queue,
                                            void *item,
                                            uint32_t ticks,
@@ -120,7 +115,7 @@ static esp_err_t esp_os_queue_receive_generic(esp_os_queue_handle_t queue,
         }
     }
 
-  return ret == 0 ? ESP_OK : ESP_FAIL;
+  return ret >= 0 ? ESP_OK : ESP_FAIL;
 }
 
 static int esp_os_int_adpt_cb(int irq, void *context, void *arg)
@@ -132,6 +127,23 @@ static int esp_os_int_adpt_cb(int irq, void *context, void *arg)
   return 0;
 }
 
+//Common shared isr handler. Chain-call all ISRs.
+static void IRAM_ATTR shared_intr_isr(void *arg)
+{
+    vector_desc_t *vd = (vector_desc_t*)arg;
+    shared_vector_desc_t *sh_vec = vd->shared_vec_info;
+    esp_os_enter_critical_isr(&spinlock);
+    while(sh_vec) {
+        if (!sh_vec->disabled) {
+            if ((sh_vec->statusreg == NULL) || (*sh_vec->statusreg & sh_vec->statusmask)) {
+                sh_vec->isr(sh_vec->arg);
+            }
+        }
+        sh_vec = sh_vec->next;
+    }
+    esp_os_exit_critical_isr(&spinlock);
+}
+
 IRAM_ATTR void *heap_caps_calloc(size_t n, size_t size, uint32_t caps)
 {
   return kmm_calloc(n, size);
@@ -139,7 +151,7 @@ IRAM_ATTR void *heap_caps_calloc(size_t n, size_t size, uint32_t caps)
 
 esp_err_t esp_os_intr_free(esp_os_intr_handle_t handle)
 {
-  int irq = (int)handle;
+  int irq = handle.irq;
   int cpuint = esp_get_cpuint(irq);
 
   ASSERT(cpuint != IRQ_UNMAPPED);
@@ -154,7 +166,7 @@ esp_err_t esp_os_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatu
   void *arg, esp_os_intr_handle_t *ret_handle)
 {
   int ret;
-  esp_os_intr_handle_t intr_handle;
+  esp_os_intr_handle_t *intr_handle;
   struct irq_adpt *adapter;
   int irq = ESP_SOURCE2IRQ(source);
   int level = esp_intr_flags_to_level(flags);
@@ -168,8 +180,45 @@ esp_err_t esp_os_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatu
       return ESP_ERR_NO_MEM;
     }
 
-  adapter->func = handler;
-  adapter->arg = arg;
+  esp_os_enter_critical(&spinlock);
+  //Get an int vector desc for int.
+  vector_desc_t *vd = get_desc_for_int(cpuint, this_cpu());
+  if (vd == NULL) {
+      esp_os_exit_critical(&spinlock);
+      return ESP_ERR_NO_MEM;
+  }
+
+  if (flags & ESP_INTR_FLAG_SHARED) {
+    //Populate vector entry and add to linked list.
+    shared_vector_desc_t *sh_vec = kmm_malloc(sizeof(shared_vector_desc_t));
+    if (sh_vec == NULL) {
+        esp_os_exit_critical(&spinlock);
+        return ESP_ERR_NO_MEM;
+    }
+    memset(sh_vec, 0, sizeof(shared_vector_desc_t));
+    sh_vec->statusreg = (uint32_t*)intrstatusreg;
+    sh_vec->statusmask = intrstatusmask;
+    sh_vec->isr = handler;
+    sh_vec->arg = arg;
+    sh_vec->next = vd->shared_vec_info;
+    sh_vec->source = source;
+    sh_vec->disabled = 0;
+    vd->shared_vec_info = sh_vec;
+    vd->flags |= VECDESC_FL_SHARED;
+    //(Re-)set shared isr handler to new value.
+
+    adapter->func = shared_intr_isr;
+    adapter->arg = vd;
+  } else {
+    //Mark as unusable for other interrupt sources. This is ours now!
+    vd->flags = VECDESC_FL_NONSHARED;
+    if (handler) {
+        adapter->func = handler;
+        adapter->arg = arg;
+    }
+  }
+
+  esp_os_exit_critical(&spinlock);
 
   ret = irq_attach(irq, esp_os_int_adpt_cb, adapter);
 
@@ -179,7 +228,7 @@ esp_err_t esp_os_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatu
     }
 
   intr_handle = kmm_malloc(sizeof(esp_os_intr_handle_t));
-  if (!intr_handle)
+  if (intr_handle == NULL)
     {
       _err("Failed to alloc memory\n");
       return ESP_ERR_NO_MEM;
@@ -187,7 +236,9 @@ esp_err_t esp_os_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatu
 
   intr_handle->irq = irq;
 
-  *ret_handle = intr_handle;
+  *ret_handle = *intr_handle;
+
+  up_enable_irq(irq);
 
   return ESP_OK;
 }
