@@ -13,19 +13,23 @@
 #include <limits.h>
 #include <assert.h>
 #include "sdkconfig.h"
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#endif
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_memory_utils.h"
 #include "esp_intr_alloc.h"
 #include "esp_attr.h"
 #include "esp_cpu.h"
+#include "esp_heap_caps.h"
 #include "esp_private/rtc_ctrl.h"
 #include "esp_private/critical_section.h"
 #include "soc/interrupts.h"
 #include "soc/soc_caps.h"
 #include "sdkconfig.h"
+#include "platform/os.h"
 
 #if !CONFIG_FREERTOS_UNICORE
 #include "esp_ipc.h"
@@ -126,7 +130,11 @@ static uint32_t non_iram_int_mask[SOC_CPU_CORES_NUM];
 static uint32_t non_iram_int_disabled[SOC_CPU_CORES_NUM];
 static bool non_iram_int_disabled_flag[SOC_CPU_CORES_NUM];
 
+#ifdef __NuttX__
+static spinlock_t __attribute__((unused)) spinlock = SP_UNLOCKED;
+#else
 static portMUX_TYPE __attribute__((unused)) spinlock = portMUX_INITIALIZER_UNLOCKED;
+#endif
 
 //Inserts an item into vector_desc list so that the list is sorted
 //with an incrementing cpu.intno value.
@@ -166,7 +174,7 @@ static vector_desc_t *find_desc_for_int(int intno, int cpu)
 //Returns a vector_desc entry for an intno/cpu.
 //Either returns a preexisting one or allocates a new one and inserts
 //it into the list. Returns NULL on malloc fail.
-static vector_desc_t *get_desc_for_int(int intno, int cpu)
+vector_desc_t *get_desc_for_int(int intno, int cpu)
 {
     vector_desc_t *vd = find_desc_for_int(intno, cpu);
     if (vd == NULL) {

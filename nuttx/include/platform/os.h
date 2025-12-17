@@ -12,6 +12,9 @@
 #define OS_FALSE FALSE
 #define OS_TRUE TRUE
 #define OS_PORT_YIELD_FROM_ISR()
+#define traceISR_ENTER(param1)
+#define traceISR_EXIT(param1)
+#define os_task_switch_is_pended(_cpu_) (false)
 
 struct mq_adpt
 {
@@ -28,7 +31,7 @@ struct irq_adpt
 
 typedef struct esp_os_intr_handle_t
 {
-  intr_handle_t handle;
+  intr_handle_t *intr_handle;
   int irq;
 } esp_os_intr_handle_t;
 

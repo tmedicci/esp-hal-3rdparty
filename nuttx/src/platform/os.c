@@ -18,6 +18,61 @@
 
 #define OS_PORT_MAX_DELAY      0xfffffffful
 
+typedef struct shared_vector_desc_t shared_vector_desc_t;
+typedef struct vector_desc_t vector_desc_t;
+
+struct shared_vector_desc_t {
+    int disabled: 1;
+    int source: 16;
+    volatile uint32_t *statusreg;
+    uint32_t statusmask;
+    intr_handler_t isr;
+    void *arg;
+    shared_vector_desc_t *next;
+};
+
+#define VECDESC_FL_RESERVED     (1<<0)
+#define VECDESC_FL_INIRAM       (1<<1)
+#define VECDESC_FL_SHARED       (1<<2)
+#define VECDESC_FL_NONSHARED    (1<<3)
+#define VECDESC_FL_TYPE_MASK    (0xf)
+
+#if SOC_CPU_HAS_FLEXIBLE_INTC
+/* On targets that have configurable interrupts levels, store the assigned level in the flags */
+#define VECDESC_FL_LEVEL_SHIFT  (8)
+/* Allocate 4 bits in the flag */
+#define VECDESC_FL_LEVEL_MASK   (0xf)
+/* Help to extract the level from flags */
+#define VECDESC_FL_LEVEL(flags) (((flags) >> VECDESC_FL_LEVEL_SHIFT) & VECDESC_FL_LEVEL_MASK)
+#endif
+
+//Pack using bitfields for better memory use
+struct vector_desc_t {
+    int flags: 16;                          //OR of VECDESC_FL_* defines
+    unsigned int cpu: 1;
+    unsigned int intno: 5;
+    int source: 16;                 //Interrupt mux flags, used when not shared
+    shared_vector_desc_t *shared_vec_info;  //used when VECDESC_FL_SHARED
+    vector_desc_t *next;
+};
+
+/** Interrupt handler associated data structure */
+typedef struct intr_handle_data_t {
+    vector_desc_t *vector_desc;
+    shared_vector_desc_t *shared_vector_desc;
+} intr_handle_data_t;
+
+typedef struct non_shared_isr_arg_t non_shared_isr_arg_t;
+
+struct non_shared_isr_arg_t {
+    intr_handler_t isr;
+    void *isr_arg;
+    int source;
+};
+
+//Linked list of vector descriptions, sorted by cpu.intno value
+static vector_desc_t *vector_desc_head = NULL;
+
 static esp_err_t esp_os_queue_send_generic(esp_os_queue_handle_t queue,
                                            void *item,
                                            uint32_t ticks,
@@ -149,9 +204,15 @@ IRAM_ATTR void *heap_caps_calloc(size_t n, size_t size, uint32_t caps)
   return kmm_calloc(n, size);
 }
 
-esp_err_t esp_os_intr_free(esp_os_intr_handle_t handle)
+IRAM_ATTR void *heap_caps_malloc(size_t size, uint32_t caps)
 {
-  int irq = handle.irq;
+  return kmm_malloc(size);
+}
+
+esp_err_t esp_os_intr_free(intr_handle_t handle)
+{
+  esp_os_intr_handle_t *intr_handle = (esp_os_intr_handle_t *)handle;
+  int irq = intr_handle->irq;
   int cpuint = esp_get_cpuint(irq);
 
   ASSERT(cpuint != IRQ_UNMAPPED);
@@ -162,8 +223,10 @@ esp_err_t esp_os_intr_free(esp_os_intr_handle_t handle)
   return ESP_OK;
 }
 
+extern vector_desc_t *get_desc_for_int(int intno, int cpu);
+
 esp_err_t esp_os_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusreg, uint32_t intrstatusmask, esp_os_intr_handler_t handler,
-  void *arg, esp_os_intr_handle_t *ret_handle)
+  void *arg, intr_handle_t *ret_handle)
 {
   int ret;
   esp_os_intr_handle_t *intr_handle;
@@ -236,7 +299,7 @@ esp_err_t esp_os_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatu
 
   intr_handle->irq = irq;
 
-  *ret_handle = *intr_handle;
+  *ret_handle = (intr_handle_t)intr_handle;
 
   up_enable_irq(irq);
 
