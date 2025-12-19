@@ -844,11 +844,7 @@ static esp_err_t gdma_del_rx_channel(gdma_channel_t *dma_channel)
     return ESP_OK;
 }
 
-#ifndef __NuttX__
 void gdma_default_rx_isr(void *args)
-#else
-int gdma_default_rx_isr(int irq, void *context, void *args)
-#endif
 {
     gdma_rx_channel_t *rx_chan = (gdma_rx_channel_t *)args;
     gdma_pair_t *pair = rx_chan->base.pair;
@@ -901,14 +897,9 @@ int gdma_default_rx_isr(int irq, void *context, void *args)
         portYIELD_FROM_ISR();
 #endif
     }
-    return 0;
 }
 
-#ifndef __NuttX__
 void gdma_default_tx_isr(void *args)
-#else
-int gdma_default_tx_isr(int irq, void *context, void *args)
-#endif
 {
     gdma_tx_channel_t *tx_chan = (gdma_tx_channel_t *)args;
     gdma_pair_t *pair = tx_chan->base.pair;
@@ -936,7 +927,6 @@ int gdma_default_tx_isr(int irq, void *context, void *args)
         portYIELD_FROM_ISR();
 #endif
     }
-    return 0;
 }
 
 static esp_err_t gdma_install_rx_interrupt(gdma_rx_channel_t *rx_chan)
@@ -963,11 +953,8 @@ static esp_err_t gdma_install_rx_interrupt(gdma_rx_channel_t *rx_chan)
     rx_chan->base.intr = intr;
 #else
     int periph = gdma_periph_signals.groups[group->group_id].pairs[pair->pair_id].rx_irq_id;
-    int cpuint = esp_setup_irq(periph, 1, ESP_IRQ_TRIGGER_LEVEL);
+    int cpuint = esp_setup_irq(periph, 1, ESP_IRQ_TRIGGER_LEVEL, gdma_default_rx_isr, rx_chan);
     ESP_RETURN_ON_ERROR(cpuint < 0 ? ESP_ERR_INVALID_ARG : ESP_OK, TAG, "enable interrupt failed");
-    int rx_irq = ESP_SOURCE2IRQ(periph);
-    ret = irq_attach(rx_irq, gdma_default_rx_isr, rx_chan);
-    ESP_GOTO_ON_ERROR(ret == OK ? ESP_OK : ESP_ERR_INVALID_ARG, err, TAG, "alloc interrupt failed");
 #endif
 
     esp_os_enter_critical(&pair->spinlock);
@@ -1004,11 +991,8 @@ static esp_err_t gdma_install_tx_interrupt(gdma_tx_channel_t *tx_chan)
     tx_chan->base.intr = intr;
 #else
     int periph = gdma_periph_signals.groups[group->group_id].pairs[pair->pair_id].tx_irq_id;
-    int cpuint = esp_setup_irq(periph, 1, ESP_IRQ_TRIGGER_LEVEL);
+    int cpuint = esp_setup_irq(periph, 1, ESP_IRQ_TRIGGER_LEVEL, gdma_default_tx_isr, tx_chan);
     ESP_RETURN_ON_ERROR(cpuint < 0 ? ESP_ERR_INVALID_ARG : ESP_OK, TAG, "enable interrupt failed");
-    int tx_irq = ESP_SOURCE2IRQ(periph);
-    ret = irq_attach(tx_irq, gdma_default_tx_isr, tx_chan);
-    ESP_GOTO_ON_ERROR(ret == OK ? ESP_OK : ESP_ERR_INVALID_ARG, err, TAG, "alloc interrupt failed");
 #endif
 
     esp_os_enter_critical(&pair->spinlock);

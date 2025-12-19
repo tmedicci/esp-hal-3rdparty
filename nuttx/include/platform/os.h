@@ -19,8 +19,8 @@
 struct mq_adpt
 {
   struct file mq;           /* Message queue handle */
-  uint32_t    msgsize;      /* Message size */
-  char        name[16];     /* Message queue name */
+  uint32_t msgsize;      /* Message size */
+  char     name[16];     /* Message queue name */
 };
 
 struct irq_adpt

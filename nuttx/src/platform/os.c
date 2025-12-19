@@ -135,7 +135,7 @@ static esp_err_t esp_os_queue_receive_generic(esp_os_queue_handle_t queue,
   unsigned int prio;
   struct mq_adpt *mq_adpt = (struct mq_adpt *)queue;
 
-  if (ticks == OS_PORT_MAX_DELAY)
+  if (ticks == OS_PORT_MAX_DELAY || up_interrupt_context())
     {
       ret = file_mq_receive(&mq_adpt->mq, (char *)item,
                             mq_adpt->msgsize, &prio);
@@ -173,30 +173,13 @@ static esp_err_t esp_os_queue_receive_generic(esp_os_queue_handle_t queue,
   return ret >= 0 ? ESP_OK : ESP_FAIL;
 }
 
-static int esp_os_int_adpt_cb(int irq, void *context, void *arg)
+IRAM_ATTR static int esp_os_int_adpt_cb(int irq, void *context, void *arg)
 {
   struct irq_adpt *adapter = (struct irq_adpt *)arg;
 
   adapter->func(adapter->arg);
 
   return 0;
-}
-
-//Common shared isr handler. Chain-call all ISRs.
-static void IRAM_ATTR shared_intr_isr(void *arg)
-{
-    vector_desc_t *vd = (vector_desc_t*)arg;
-    shared_vector_desc_t *sh_vec = vd->shared_vec_info;
-    esp_os_enter_critical_isr(&spinlock);
-    while(sh_vec) {
-        if (!sh_vec->disabled) {
-            if ((sh_vec->statusreg == NULL) || (*sh_vec->statusreg & sh_vec->statusmask)) {
-                sh_vec->isr(sh_vec->arg);
-            }
-        }
-        sh_vec = sh_vec->next;
-    }
-    esp_os_exit_critical_isr(&spinlock);
 }
 
 IRAM_ATTR void *heap_caps_calloc(size_t n, size_t size, uint32_t caps)
@@ -229,77 +212,10 @@ esp_err_t esp_os_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatu
   void *arg, intr_handle_t *ret_handle)
 {
   int ret;
-  esp_os_intr_handle_t *intr_handle;
-  struct irq_adpt *adapter;
   int irq = ESP_SOURCE2IRQ(source);
-  int level = esp_intr_flags_to_level(flags);
-  int type = flags & ESP_INTR_FLAG_EDGE ? ESP_IRQ_TRIGGER_EDGE : ESP_IRQ_TRIGGER_LEVEL;
-  int cpuint = esp_setup_irq(source, level, type);
+  int cpuint = esp_setup_irq_with_flags_intrstatus(source, flags, intrstatusreg, intrstatusmask, handler, arg);
 
-  adapter = kmm_malloc(sizeof(struct irq_adpt));
-  if (!adapter)
-    {
-      _err("Failed to alloc memory\n");
-      return ESP_ERR_NO_MEM;
-    }
-
-  esp_os_enter_critical(&spinlock);
-  //Get an int vector desc for int.
-  vector_desc_t *vd = get_desc_for_int(cpuint, this_cpu());
-  if (vd == NULL) {
-      esp_os_exit_critical(&spinlock);
-      return ESP_ERR_NO_MEM;
-  }
-
-  if (flags & ESP_INTR_FLAG_SHARED) {
-    //Populate vector entry and add to linked list.
-    shared_vector_desc_t *sh_vec = kmm_malloc(sizeof(shared_vector_desc_t));
-    if (sh_vec == NULL) {
-        esp_os_exit_critical(&spinlock);
-        return ESP_ERR_NO_MEM;
-    }
-    memset(sh_vec, 0, sizeof(shared_vector_desc_t));
-    sh_vec->statusreg = (uint32_t*)intrstatusreg;
-    sh_vec->statusmask = intrstatusmask;
-    sh_vec->isr = handler;
-    sh_vec->arg = arg;
-    sh_vec->next = vd->shared_vec_info;
-    sh_vec->source = source;
-    sh_vec->disabled = 0;
-    vd->shared_vec_info = sh_vec;
-    vd->flags |= VECDESC_FL_SHARED;
-    //(Re-)set shared isr handler to new value.
-
-    adapter->func = shared_intr_isr;
-    adapter->arg = vd;
-  } else {
-    //Mark as unusable for other interrupt sources. This is ours now!
-    vd->flags = VECDESC_FL_NONSHARED;
-    if (handler) {
-        adapter->func = handler;
-        adapter->arg = arg;
-    }
-  }
-
-  esp_os_exit_critical(&spinlock);
-
-  ret = irq_attach(irq, esp_os_int_adpt_cb, adapter);
-
-  if (ret != OK)
-    {
-      return ESP_ERR_INVALID_ARG;
-    }
-
-  intr_handle = kmm_malloc(sizeof(esp_os_intr_handle_t));
-  if (intr_handle == NULL)
-    {
-      _err("Failed to alloc memory\n");
-      return ESP_ERR_NO_MEM;
-    }
-
-  intr_handle->irq = irq;
-
-  *ret_handle = (intr_handle_t)intr_handle;
+  *ret_handle = esp_get_handle(irq);
 
   up_enable_irq(irq);
 
@@ -362,9 +278,31 @@ esp_err_t esp_os_queue_receive(esp_os_queue_handle_t queue, void *item, uint32_t
 
 esp_err_t esp_os_queue_receive_from_isr(esp_os_queue_handle_t queue, void *item, void *hptw)
 {
+  esp_err_t ret;
+  int flags = file_fcntl(&queue->mq, F_GETFL);
+  if ((flags & O_NONBLOCK) == 0)
+    {
+      if (file_fcntl(&queue->mq, F_SETFL, flags | O_NONBLOCK) == -1)
+        {
+          _err("Failed to set nonblock flag\n");
+          return ESP_FAIL;
+        }
+    }
+
   *(int *)hptw = 0;
 
-  return esp_os_queue_receive_generic(queue, item, 0);
+  ret = esp_os_queue_receive_generic(queue, item, 0);
+
+  /* Restore the original flags */
+
+  flags = file_fcntl(&queue->mq, F_GETFL);
+  if (file_fcntl(&queue->mq, F_SETFL, flags & ~O_NONBLOCK) == -1)
+    {
+      _err("Failed to clear nonblock flag\n");
+      return ESP_FAIL;
+    }
+
+  return ret;
 }
 
 void esp_os_queue_delete_with_caps(esp_os_queue_handle_t queue)
