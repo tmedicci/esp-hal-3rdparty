@@ -107,8 +107,14 @@
 
 /* ecall is dispatched like normal interrupts.  It occupies an IRQ number. */
 
-#define RISCV_NIRQ_INTERRUPTS      16  /* Number of RISC-V dispatched interrupts. */
-#define ESP_IRQ_FIRSTPERIPH        16  /* First peripheral IRQ number */
+#define RISCV_NIRQ_INTERRUPTS      16                                       /* Number of RISC-V dispatched interrupts. */
+#define ESP_NIRQ_DEMUX             1                                        /* Number of IRQs for the demapping interrupt */
+#define ESP_IRQ_FIRSTPERIPH        RISCV_NIRQ_INTERRUPTS + ESP_NIRQ_DEMUX   /* First peripheral IRQ number */
+
+/* Special IRQ for the demapping interrupt */
+
+#define ESP_IRQ_DEMUX              RISCV_NIRQ_INTERRUPTS
+
 
 /* IRQ numbers for peripheral interrupts coming through the Interrupt
  * Matrix.
@@ -217,4 +223,8 @@
 
 /* Total number of IRQs: ecall + Number of peripheral IRQs + GPIOs IRQs. */
 
-#define NR_IRQS  (RISCV_NIRQ_INTERRUPTS + ESP_NIRQ_PERIPH + ESP_NIRQ_GPIO)
+#define NR_IRQS  (RISCV_NIRQ_INTERRUPTS + ESP_NIRQ_DEMUX + ESP_NIRQ_PERIPH + ESP_NIRQ_GPIO)
+
+#if CONFIG_ARCH_NUSER_INTERRUPTS < (ESP_IRQ_DEMUX + 1)
+#  error "CONFIG_ARCH_NUSER_INTERRUPTS is less than ESP_IRQ_DEMUX + 1. Please increase CONFIG_ARCH_NUSER_INTERRUPTS to at least ESP_IRQ_DEMUX + 1."
+#endif

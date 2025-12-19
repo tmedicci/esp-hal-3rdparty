@@ -140,7 +140,7 @@ static esp_err_t esp_os_queue_receive_generic(esp_os_queue_handle_t queue,
     {
       ret = file_mq_receive(&mq_adpt->mq, (char *)item,
                             mq_adpt->msgsize, &prio);
-      if (ret < 0)
+      if (ret < 0 && ret != -EAGAIN)
         {
           _err("Failed to receive from mqueue error=%d\n", ret);
         }
@@ -164,7 +164,7 @@ static esp_err_t esp_os_queue_receive_generic(esp_os_queue_handle_t queue,
 
       ret = file_mq_timedreceive(&mq_adpt->mq, (char *)item,
                                  mq_adpt->msgsize, &prio, &timeout);
-      if (ret < 0)
+      if (ret < 0 && ret != -EAGAIN)
         {
           _err("Failed to timedreceive from mqueue error=%d\n",
                ret);
