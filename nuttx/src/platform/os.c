@@ -12,6 +12,7 @@
 
 #include "esp_irq.h"
 
+#include "esp_heap_caps.h"
 #include "esp_private/critical_section.h"
 
 #include "platform/os.h"
