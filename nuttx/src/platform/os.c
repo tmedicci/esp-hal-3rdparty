@@ -12,8 +12,8 @@
 
 #include "esp_irq.h"
 
-#include "esp_heap_caps.h"
 #include "esp_private/critical_section.h"
+#include "esp_private/mem.h"
 
 #include "platform/os.h"
 
@@ -183,12 +183,30 @@ IRAM_ATTR static int esp_os_int_adpt_cb(int irq, void *context, void *arg)
   return 0;
 }
 
-IRAM_ATTR void *heap_caps_calloc(size_t n, size_t size, uint32_t caps)
+IRAM_ATTR void *esp_os_calloc_with_caps(size_t n, size_t size, uint32_t caps)
 {
   return kmm_calloc(n, size);
 }
 
-IRAM_ATTR void *heap_caps_malloc(size_t size, uint32_t caps)
+IRAM_ATTR void *esp_os_aligned_calloc_with_caps(size_t alignment, size_t n, size_t size, uint32_t caps)
+{
+  size_t size_bytes;
+  if (__builtin_mul_overflow(n, size, &size_bytes))
+    {
+      return NULL;
+    }
+
+  void *ptr = kmm_memalign(alignment, size_bytes);
+  if(ptr != NULL)
+    {
+      memset(ptr, 0, size_bytes);
+    }
+
+  return ptr;
+}
+
+
+IRAM_ATTR void *esp_os_malloc_with_caps(size_t size, uint32_t caps)
 {
   return kmm_malloc(size);
 }
