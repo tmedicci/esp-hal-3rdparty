@@ -183,12 +183,12 @@ IRAM_ATTR static int esp_os_int_adpt_cb(int irq, void *context, void *arg)
   return 0;
 }
 
-IRAM_ATTR void *esp_os_calloc_with_caps(size_t n, size_t size, uint32_t caps)
+void *esp_os_calloc_with_caps(size_t n, size_t size, uint32_t caps)
 {
   return kmm_calloc(n, size);
 }
 
-IRAM_ATTR void *esp_os_aligned_calloc_with_caps(size_t alignment, size_t n, size_t size, uint32_t caps)
+void *esp_os_aligned_calloc_with_caps(size_t alignment, size_t n, size_t size, uint32_t caps)
 {
   size_t size_bytes;
   if (__builtin_mul_overflow(n, size, &size_bytes))
@@ -206,7 +206,7 @@ IRAM_ATTR void *esp_os_aligned_calloc_with_caps(size_t alignment, size_t n, size
 }
 
 
-IRAM_ATTR void *esp_os_malloc_with_caps(size_t size, uint32_t caps)
+void *esp_os_malloc_with_caps(size_t size, uint32_t caps)
 {
   return kmm_malloc(size);
 }
