@@ -26,9 +26,7 @@
 #include "esp_log.h"
 #include "esp_check.h"
 #include "esp_intr_alloc.h"
-#ifndef __NuttX__
 #include "esp_heap_caps.h"
-#endif
 #include "hal/gdma_hal.h"
 #include "hal/gdma_ll.h"
 #include "hal/gdma_hal_ahb.h"

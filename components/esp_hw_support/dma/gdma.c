@@ -29,19 +29,13 @@
 #include "gdma_priv.h"
 #include "esp_memory_utils.h"
 #include "esp_flash_encrypt.h"
+#include "esp_private/mem.h"
+#include "esp_private/irq.h"
+#include "platform/os.h"
 
 #define GDMA_INVALID_PERIPH_TRIG  (0x3F)
 #define SEARCH_REQUEST_RX_CHANNEL (1 << 0)
 #define SEARCH_REQUEST_TX_CHANNEL (1 << 1)
-
-#ifdef __NuttX__
-#  include <nuttx/kmalloc.h>
-#  include "esp_irq.h"
-
-#  define heap_caps_calloc(n, s, c)  kmm_calloc(n, s)
-#  define free(p)                    kmm_free(p)
-
-#endif
 
 typedef struct gdma_platform_t {
     DECLARE_CRIT_SECTION_LOCK_IN_STRUCT(spinlock)                       // platform level spinlock, protect the group handle slots and reference count of each group.
@@ -104,11 +98,11 @@ static esp_err_t do_allocate_gdma_channel(const gdma_channel_search_info_t *sear
     }
     if (config->direction == GDMA_CHANNEL_DIRECTION_TX) {
         search_code |= SEARCH_REQUEST_TX_CHANNEL; // search TX only
-        alloc_tx_channel = heap_caps_calloc(1, sizeof(gdma_tx_channel_t), GDMA_MEM_ALLOC_CAPS);
+        alloc_tx_channel = esp_os_calloc_with_caps(1, sizeof(gdma_tx_channel_t), GDMA_MEM_ALLOC_CAPS);
         ESP_GOTO_ON_FALSE(alloc_tx_channel, ESP_ERR_NO_MEM, err, TAG, "no mem for gdma tx channel");
     } else if (config->direction == GDMA_CHANNEL_DIRECTION_RX) {
         search_code |= SEARCH_REQUEST_RX_CHANNEL; // search RX only
-        alloc_rx_channel = heap_caps_calloc(1, sizeof(gdma_rx_channel_t), GDMA_MEM_ALLOC_CAPS);
+        alloc_rx_channel = esp_os_calloc_with_caps(1, sizeof(gdma_rx_channel_t), GDMA_MEM_ALLOC_CAPS);
         ESP_GOTO_ON_FALSE(alloc_rx_channel, ESP_ERR_NO_MEM, err, TAG, "no mem for gdma rx channel");
     }
 
@@ -516,13 +510,7 @@ esp_err_t gdma_register_tx_event_callbacks(gdma_channel_handle_t dma_chan, gdma_
     memcpy(&tx_chan->cbs, cbs, sizeof(gdma_tx_event_callbacks_t));
     tx_chan->user_data = user_data;
 
-#ifndef __NuttX__
     ESP_RETURN_ON_ERROR(esp_intr_enable(dma_chan->intr), TAG, "enable interrupt failed");
-#else
-    int periph = gdma_periph_signals.groups[group->group_id].pairs[pair->pair_id].tx_irq_id;
-    int tx_irq = ESP_SOURCE2IRQ(periph);
-    up_enable_irq(tx_irq);
-#endif
 
     return ESP_OK;
 }
@@ -567,13 +555,7 @@ esp_err_t gdma_register_rx_event_callbacks(gdma_channel_handle_t dma_chan, gdma_
     memcpy(&rx_chan->cbs, cbs, sizeof(gdma_rx_event_callbacks_t));
     rx_chan->user_data = user_data;
 
-#ifndef __NuttX__
     ESP_RETURN_ON_ERROR(esp_intr_enable(dma_chan->intr), TAG, "enable interrupt failed");
-#else
-    int periph = gdma_periph_signals.groups[group->group_id].pairs[pair->pair_id].rx_irq_id;
-    int rx_irq = ESP_SOURCE2IRQ(periph);
-    up_enable_irq(rx_irq);
-#endif
 
     return ESP_OK;
 }
@@ -665,7 +647,7 @@ static gdma_group_t *gdma_acquire_group_handle(int group_id, void (*hal_init)(gd
 {
     bool new_group = false;
     gdma_group_t *group = NULL;
-    gdma_group_t *pre_alloc_group = heap_caps_calloc(1, sizeof(gdma_group_t), GDMA_MEM_ALLOC_CAPS);
+    gdma_group_t *pre_alloc_group = esp_os_calloc_with_caps(1, sizeof(gdma_group_t), GDMA_MEM_ALLOC_CAPS);
     if (!pre_alloc_group) {
         goto out;
     }
@@ -732,7 +714,7 @@ static gdma_pair_t *gdma_acquire_pair_handle(gdma_group_t *group, int pair_id)
 {
     bool new_pair = false;
     gdma_pair_t *pair = NULL;
-    gdma_pair_t *pre_alloc_pair = heap_caps_calloc(1, sizeof(gdma_pair_t), GDMA_MEM_ALLOC_CAPS);
+    gdma_pair_t *pre_alloc_pair = esp_os_calloc_with_caps(1, sizeof(gdma_pair_t), GDMA_MEM_ALLOC_CAPS);
     if (!pre_alloc_pair) {
         goto out;
     }
@@ -784,16 +766,14 @@ static esp_err_t gdma_del_tx_channel(gdma_channel_t *dma_channel)
     pair->occupy_code &= ~SEARCH_REQUEST_TX_CHANNEL;
     esp_os_exit_critical(&pair->spinlock);
 
-#ifndef __NuttX__
     if (dma_channel->intr) {
-        esp_intr_free(dma_channel->intr);
+        esp_os_intr_free(dma_channel->intr);
         esp_os_enter_critical(&pair->spinlock);
         gdma_hal_enable_intr(hal, pair_id, GDMA_CHANNEL_DIRECTION_TX, UINT32_MAX, false); // disable all interrupt events
         gdma_hal_clear_intr(hal, pair->pair_id, GDMA_CHANNEL_DIRECTION_TX, UINT32_MAX); // clear all pending events
         esp_os_exit_critical(&pair->spinlock);
         ESP_LOGD(TAG, "uninstall interrupt service for tx channel (%d,%d)", group_id, pair_id);
     }
-#endif
 
     free(tx_chan);
     ESP_LOGD(TAG, "del tx channel (%d,%d)", group_id, pair_id);
@@ -821,16 +801,14 @@ static esp_err_t gdma_del_rx_channel(gdma_channel_t *dma_channel)
     pair->occupy_code &= ~SEARCH_REQUEST_RX_CHANNEL;
     esp_os_exit_critical(&pair->spinlock);
 
-#ifndef __NuttX__
     if (dma_channel->intr) {
-        esp_intr_free(dma_channel->intr);
+        esp_os_intr_free(dma_channel->intr);
         esp_os_enter_critical(&pair->spinlock);
         gdma_hal_enable_intr(hal, pair_id, GDMA_CHANNEL_DIRECTION_RX, UINT32_MAX, false); // disable all interrupt events
         gdma_hal_clear_intr(hal, pair->pair_id, GDMA_CHANNEL_DIRECTION_RX, UINT32_MAX); // clear all pending events
         esp_os_exit_critical(&pair->spinlock);
         ESP_LOGD(TAG, "uninstall interrupt service for rx channel (%d,%d)", group_id, pair_id);
     }
-#endif
 
     free(rx_chan);
     ESP_LOGD(TAG, "del rx channel (%d,%d)", group_id, pair_id);
@@ -893,9 +871,7 @@ void gdma_default_rx_isr(void *args)
     }
 
     if (need_yield) {
-#ifndef __NuttX__
-        portYIELD_FROM_ISR();
-#endif
+        OS_PORT_YIELD_FROM_ISR();
     }
 }
 
@@ -923,9 +899,7 @@ void gdma_default_tx_isr(void *args)
         need_yield |= tx_chan->cbs.on_descr_err(&tx_chan->base, NULL, tx_chan->user_data);
     }
     if (need_yield) {
-#ifndef __NuttX__
-        portYIELD_FROM_ISR();
-#endif
+        OS_PORT_YIELD_FROM_ISR();
     }
 }
 
@@ -944,18 +918,12 @@ static esp_err_t gdma_install_rx_interrupt(gdma_rx_channel_t *rx_chan)
 #if GDMA_LL_AHB_TX_RX_SHARE_INTERRUPT
     isr_flags |= ESP_INTR_FLAG_SHARED;
 #endif
-#ifndef __NuttX__
     intr_handle_t intr = NULL;
-    ret = esp_intr_alloc_intrstatus(gdma_periph_signals.groups[group->group_id].pairs[pair_id].rx_irq_id, isr_flags,
-                                    gdma_hal_get_intr_status_reg(hal, pair_id, GDMA_CHANNEL_DIRECTION_RX), GDMA_LL_RX_EVENT_MASK,
-                                    gdma_default_rx_isr, rx_chan, &intr);
+    ret = esp_os_intr_alloc_intrstatus(gdma_periph_signals.groups[group->group_id].pairs[pair_id].rx_irq_id, isr_flags,
+                                       gdma_hal_get_intr_status_reg(hal, pair_id, GDMA_CHANNEL_DIRECTION_RX), GDMA_LL_RX_EVENT_MASK,
+                                       gdma_default_rx_isr, rx_chan, &intr);
     ESP_GOTO_ON_ERROR(ret, err, TAG, "alloc interrupt failed");
     rx_chan->base.intr = intr;
-#else
-    int periph = gdma_periph_signals.groups[group->group_id].pairs[pair->pair_id].rx_irq_id;
-    int cpuint = esp_setup_irq(periph, 1, ESP_IRQ_TRIGGER_LEVEL, gdma_default_rx_isr, rx_chan);
-    ESP_RETURN_ON_ERROR(cpuint < 0 ? ESP_ERR_INVALID_ARG : ESP_OK, TAG, "enable interrupt failed");
-#endif
 
     esp_os_enter_critical(&pair->spinlock);
     gdma_hal_enable_intr(hal, pair_id, GDMA_CHANNEL_DIRECTION_RX, UINT32_MAX, false); // disable all interrupt events
@@ -982,18 +950,12 @@ static esp_err_t gdma_install_tx_interrupt(gdma_tx_channel_t *tx_chan)
 #if GDMA_LL_AHB_TX_RX_SHARE_INTERRUPT
     isr_flags |= ESP_INTR_FLAG_SHARED;
 #endif
-#ifndef __NuttX__
     intr_handle_t intr = NULL;
-    ret = esp_intr_alloc_intrstatus(gdma_periph_signals.groups[group->group_id].pairs[pair_id].tx_irq_id, isr_flags,
-                                    gdma_hal_get_intr_status_reg(hal, pair_id, GDMA_CHANNEL_DIRECTION_TX), GDMA_LL_TX_EVENT_MASK,
-                                    gdma_default_tx_isr, tx_chan, &intr);
+    ret = esp_os_intr_alloc_intrstatus(gdma_periph_signals.groups[group->group_id].pairs[pair_id].tx_irq_id, isr_flags,
+                                       gdma_hal_get_intr_status_reg(hal, pair_id, GDMA_CHANNEL_DIRECTION_TX), GDMA_LL_TX_EVENT_MASK,
+                                       gdma_default_tx_isr, tx_chan, &intr);
     ESP_GOTO_ON_ERROR(ret, err, TAG, "alloc interrupt failed");
     tx_chan->base.intr = intr;
-#else
-    int periph = gdma_periph_signals.groups[group->group_id].pairs[pair->pair_id].tx_irq_id;
-    int cpuint = esp_setup_irq(periph, 1, ESP_IRQ_TRIGGER_LEVEL, gdma_default_tx_isr, tx_chan);
-    ESP_RETURN_ON_ERROR(cpuint < 0 ? ESP_ERR_INVALID_ARG : ESP_OK, TAG, "enable interrupt failed");
-#endif
 
     esp_os_enter_critical(&pair->spinlock);
     gdma_hal_enable_intr(hal, pair_id, GDMA_CHANNEL_DIRECTION_TX, UINT32_MAX, false); // disable all interrupt events

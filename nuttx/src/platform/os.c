@@ -174,15 +174,6 @@ static esp_err_t esp_os_queue_receive_generic(esp_os_queue_handle_t queue,
   return ret >= 0 ? ESP_OK : ESP_FAIL;
 }
 
-IRAM_ATTR static int esp_os_int_adpt_cb(int irq, void *context, void *arg)
-{
-  struct irq_adpt *adapter = (struct irq_adpt *)arg;
-
-  adapter->func(adapter->arg);
-
-  return 0;
-}
-
 void *esp_os_calloc_with_caps(size_t n, size_t size, uint32_t caps)
 {
   return kmm_calloc(n, size);
@@ -217,9 +208,6 @@ esp_err_t esp_os_intr_free(intr_handle_t handle)
   int irq = intr_handle->irq;
   int cpuint = esp_get_cpuint(irq);
 
-  ASSERT(cpuint != IRQ_UNMAPPED);
-
-  up_disable_irq(irq);
   esp_teardown_irq(ESP_IRQ2SOURCE(irq), cpuint);
 
   return ESP_OK;
