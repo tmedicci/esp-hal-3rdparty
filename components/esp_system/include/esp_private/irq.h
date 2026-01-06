@@ -25,6 +25,8 @@ extern "C" {
 
 esp_err_t esp_os_intr_free(intr_handle_t handle);
 
+esp_err_t esp_os_intr_alloc(int source, int flags, esp_os_intr_handler_t handler, void *arg, intr_handle_t *ret_handle);
+
 esp_err_t esp_os_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusreg, uint32_t intrstatusmask, esp_os_intr_handler_t handler,
   void *arg, intr_handle_t *ret_handle);
 

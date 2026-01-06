@@ -14,6 +14,7 @@
 
 #include "esp_private/critical_section.h"
 #include "esp_private/mem.h"
+#include "esp_private/irq.h"
 
 #include "platform/os.h"
 
@@ -214,6 +215,11 @@ esp_err_t esp_os_intr_free(intr_handle_t handle)
 }
 
 extern vector_desc_t *get_desc_for_int(int intno, int cpu);
+
+esp_err_t esp_os_intr_alloc(int source, int flags, esp_os_intr_handler_t handler, void *arg, intr_handle_t *ret_handle)
+{
+  return esp_os_intr_alloc_intrstatus(source, flags, 0, 0, handler, arg, ret_handle);
+}
 
 esp_err_t esp_os_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusreg, uint32_t intrstatusmask, esp_os_intr_handler_t handler,
   void *arg, intr_handle_t *ret_handle)

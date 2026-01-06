@@ -25,6 +25,9 @@
 #include "esp_private/esp_gpio_reserve.h"
 #include "esp_private/io_mux.h"
 #include "esp_private/critical_section.h"
+#include "esp_private/irq.h"
+#include "esp_private/mem.h"
+#include "platform/os.h"
 
 #if (SOC_RTCIO_PIN_COUNT > 0)
 #include "hal/rtc_io_hal.h"
@@ -486,7 +489,6 @@ esp_err_t gpio_reset_pin(gpio_num_t gpio_num)
     return ESP_OK;
 }
 
-#ifndef __NuttX__
 static inline void IRAM_ATTR gpio_isr_loop(uint32_t status, const uint32_t gpio_num_start)
 {
     while (status) {
@@ -511,9 +513,7 @@ static inline void IRAM_ATTR gpio_isr_loop(uint32_t status, const uint32_t gpio_
         }
     }
 }
-#endif
 
-#ifndef __NuttX__
 static void IRAM_ATTR gpio_intr_service(void *arg)
 {
     //GPIO intr process
@@ -537,15 +537,13 @@ static void IRAM_ATTR gpio_intr_service(void *arg)
         gpio_isr_loop(gpio_intr_status_h, 32);
     }
 }
-#endif
 
-#ifndef __NuttX__
 esp_err_t gpio_install_isr_service(int intr_alloc_flags)
 {
     GPIO_CHECK(gpio_context.gpio_isr_func == NULL, "GPIO isr service already installed", ESP_ERR_INVALID_STATE);
     esp_err_t ret = ESP_ERR_NO_MEM;
     const uint32_t alloc_caps = (intr_alloc_flags & ESP_INTR_FLAG_IRAM) ? MALLOC_CAP_INTERNAL : MALLOC_CAP_DEFAULT;
-    gpio_isr_func_t *isr_func = (gpio_isr_func_t *) heap_caps_calloc(GPIO_NUM_MAX, sizeof(gpio_isr_func_t), alloc_caps);
+    gpio_isr_func_t *isr_func = (gpio_isr_func_t *) esp_os_calloc_with_caps(GPIO_NUM_MAX, sizeof(gpio_isr_func_t), alloc_caps);
     if (isr_func) {
         esp_os_enter_critical(&gpio_context.gpio_spinlock);
         if (gpio_context.gpio_isr_func == NULL) {
@@ -566,9 +564,7 @@ esp_err_t gpio_install_isr_service(int intr_alloc_flags)
 
     return ret;
 }
-#endif
 
-#ifndef __NuttX__
 esp_err_t gpio_isr_handler_add(gpio_num_t gpio_num, gpio_isr_t isr_handler, void *args)
 {
     GPIO_CHECK(gpio_context.gpio_isr_func != NULL, "GPIO isr service is not installed, call gpio_install_isr_service() first", ESP_ERR_INVALID_STATE);
@@ -583,9 +579,7 @@ esp_err_t gpio_isr_handler_add(gpio_num_t gpio_num, gpio_isr_t isr_handler, void
     esp_os_exit_critical(&gpio_context.gpio_spinlock);
     return ESP_OK;
 }
-#endif
 
-#ifndef __NuttX__
 esp_err_t gpio_isr_handler_remove(gpio_num_t gpio_num)
 {
     GPIO_CHECK(gpio_context.gpio_isr_func != NULL, "GPIO isr service is not installed, call gpio_install_isr_service() first", ESP_ERR_INVALID_STATE);
@@ -599,9 +593,7 @@ esp_err_t gpio_isr_handler_remove(gpio_num_t gpio_num)
     esp_os_exit_critical(&gpio_context.gpio_spinlock);
     return ESP_OK;
 }
-#endif
 
-#ifndef __NuttX__
 esp_err_t gpio_uninstall_isr_service(void)
 {
     gpio_isr_func_t *gpio_isr_func_free = NULL;
@@ -621,18 +613,14 @@ esp_err_t gpio_uninstall_isr_service(void)
     free(gpio_isr_func_free);
     return ESP_OK;
 }
-#endif
 
-#ifndef __NuttX__
 static void gpio_isr_register_on_core_static(void *param)
 {
     gpio_isr_alloc_t *p = (gpio_isr_alloc_t *)param;
     //We need to check the return value.
-    p->ret = esp_intr_alloc(p->source, p->intr_alloc_flags, p->fn, p->arg, p->handle);
+    p->ret = esp_os_intr_alloc(p->source, p->intr_alloc_flags, p->fn, p->arg, p->handle);
 }
-#endif
 
-#ifndef __NuttX__
 esp_err_t gpio_isr_register(void (*fn)(void *), void *arg, int intr_alloc_flags, gpio_isr_handle_t *handle)
 {
     GPIO_CHECK(fn, "GPIO ISR null", ESP_ERR_INVALID_ARG);
@@ -662,12 +650,11 @@ esp_err_t gpio_isr_register(void (*fn)(void *), void *arg, int intr_alloc_flags,
         return ESP_ERR_NOT_FOUND;
     }
     if (p.ret != ESP_OK) {
-        ESP_LOGE(GPIO_TAG, "esp_intr_alloc failed (0x%x)", p.ret);
+        ESP_LOGE(GPIO_TAG, "esp_os_intr_alloc failed (0x%x)", p.ret);
         return ESP_ERR_NOT_FOUND;
     }
     return ESP_OK;
 }
-#endif
 
 esp_err_t gpio_wakeup_enable(gpio_num_t gpio_num, gpio_int_type_t intr_type)
 {
