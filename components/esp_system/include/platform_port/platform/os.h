@@ -5,6 +5,7 @@
 #define OS_BASE_TYPE BaseType_t
 #define OS_FALSE pdFALSE
 #define OS_TRUE pdTRUE
+#define OS_PORT_NUM_PROCESSORS portNUM_PROCESSORS
 
 typedef QueueHandle_t esp_os_queue_handle_t;
 typedef TickType_t esp_os_tick_type_t;

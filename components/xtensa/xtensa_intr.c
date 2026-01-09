@@ -34,18 +34,19 @@
 #include "xtensa_api.h"
 #include "sdkconfig.h"
 #include "esp_rom_sys.h"
+#include "platform/os.h"
 
 /*
  * When compiling for G0-only, we don't have FreeRTOS component.
  * In fact, FreeRTOS component is only used for the core configuration, so
- * the macro portNUM_PROCESSORS and the macro/function xPortGetCoreID need to
+ * the macro OS_PORT_NUM_PROCESSORS and the macro/function xPortGetCoreID need to
  * be defined.
  */
 #if __has_include("freertos/FreeRTOS.h")
     #include "freertos/FreeRTOS.h"
     #include "freertos/portable.h"
 #else
-    _Static_assert(portNUM_PROCESSORS == 1, "G0-only Xtensa builds can only be compiled in single-core mode");
+    _Static_assert(OS_PORT_NUM_PROCESSORS == 1, "G0-only Xtensa builds can only be compiled in single-core mode");
     #define xPortGetCoreID()    0
 #endif
 
@@ -81,7 +82,7 @@ xt_exc_handler xt_set_exception_handler(int n, xt_exc_handler f)
         return 0;       /* invalid exception number */
 
     /* Convert exception number to _xt_exception_table name */
-    n = n * portNUM_PROCESSORS + xPortGetCoreID();
+    n = n * OS_PORT_NUM_PROCESSORS + xPortGetCoreID();
     old = _xt_exception_table[n];
 
     if (f) {
@@ -105,7 +106,7 @@ typedef struct xt_handler_table_entry {
     void * arg;
 } xt_handler_table_entry;
 
-extern xt_handler_table_entry _xt_interrupt_table[XCHAL_NUM_INTERRUPTS*portNUM_PROCESSORS];
+extern xt_handler_table_entry _xt_interrupt_table[XCHAL_NUM_INTERRUPTS*OS_PORT_NUM_PROCESSORS];
 
 
 /*
@@ -119,7 +120,7 @@ void IRAM_ATTR xt_unhandled_interrupt(void * arg)
 //Returns true if handler for interrupt is not the default unhandled interrupt handler
 bool xt_int_has_handler(int intr, int cpu)
 {
-    return (_xt_interrupt_table[intr*portNUM_PROCESSORS+cpu].handler != xt_unhandled_interrupt);
+    return (_xt_interrupt_table[intr*OS_PORT_NUM_PROCESSORS+cpu].handler != xt_unhandled_interrupt);
 }
 
 /*
@@ -139,7 +140,7 @@ xt_handler xt_set_interrupt_handler(int n, xt_handler f, void * arg)
         return 0;       /* priority level too high to safely handle in C */
 
     /* Convert exception number to _xt_exception_table name */
-    n = n * portNUM_PROCESSORS + xPortGetCoreID();
+    n = n * OS_PORT_NUM_PROCESSORS + xPortGetCoreID();
 
     entry = _xt_interrupt_table + n;
     old   = entry->handler;
@@ -165,7 +166,7 @@ void * xt_get_interrupt_handler_arg(int n)
         return 0;       /* invalid interrupt number */
 
     /* Convert exception number to _xt_exception_table name */
-    n = n * portNUM_PROCESSORS + xPortGetCoreID();
+    n = n * OS_PORT_NUM_PROCESSORS + xPortGetCoreID();
 
     entry = _xt_interrupt_table + n;
     return entry->arg;

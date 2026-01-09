@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sdkconfig.h"
 #include <nuttx/clock.h>
 
 #include "spinlock.h"
@@ -15,6 +16,7 @@
 #define traceISR_ENTER(param1)
 #define traceISR_EXIT(param1)
 #define os_task_switch_is_pended(_cpu_) (false)
+#define OS_PORT_NUM_PROCESSORS CONFIG_FREERTOS_NUMBER_OF_CORES
 
 struct mq_adpt
 {
