@@ -218,11 +218,9 @@ extern vector_desc_t *get_desc_for_int(int intno, int cpu);
 
 static int isr_adapter_func(int irq, void *context, void *arg)
 {
-  esp_os_intr_handler_t handler = (esp_os_intr_handler_t)arg;
-  if (handler)
-    {
-      handler(context);
-    }
+  struct intr_adapter_to_nuttx *isr_adapter_args = (struct intr_adapter_to_nuttx *)arg;
+
+  isr_adapter_args->handler(isr_adapter_args->arg);
 
   return 0;
 }
@@ -235,9 +233,22 @@ esp_err_t esp_os_intr_alloc(int source, int flags, esp_os_intr_handler_t handler
 esp_err_t esp_os_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusreg, uint32_t intrstatusmask, esp_os_intr_handler_t handler,
   void *arg, intr_handle_t *ret_handle)
 {
+  struct intr_adapter_to_nuttx *isr_adapter_args;
   int ret;
   int irq = ESP_SOURCE2IRQ(source);
-  int cpuint = esp_setup_irq_with_flags_intrstatus(source, flags, intrstatusreg, intrstatusmask, isr_adapter_func, handler);
+  int cpuint;
+
+  isr_adapter_args = kmm_calloc(1, sizeof(struct intr_adapter_to_nuttx));
+  if (isr_adapter_args == NULL)
+    {
+      irqerr("Failed to kmm_calloc\n");
+      return -EINVAL;
+    }
+
+  isr_adapter_args->handler = handler;
+  isr_adapter_args->arg = arg;
+
+  cpuint = esp_setup_irq_with_flags_intrstatus(source, flags, intrstatusreg, intrstatusmask, isr_adapter_func, isr_adapter_args);
 
   *ret_handle = esp_get_handle(irq);
 
