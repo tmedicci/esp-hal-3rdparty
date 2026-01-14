@@ -242,7 +242,7 @@ esp_err_t esp_os_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatu
   if (isr_adapter_args == NULL)
     {
       irqerr("Failed to kmm_calloc\n");
-      return -EINVAL;
+      return ESP_ERR_NO_MEM;
     }
 
   isr_adapter_args->handler = handler;
@@ -250,7 +250,19 @@ esp_err_t esp_os_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatu
 
   cpuint = esp_setup_irq_with_flags_intrstatus(source, flags, intrstatusreg, intrstatusmask, isr_adapter_func, isr_adapter_args);
 
+  if (cpuint < 0)
+    {
+      irqerr("Failed to setup interrupt\n");
+      return ESP_ERR_NOT_FOUND;
+    }
+
   *ret_handle = esp_get_handle(irq);
+
+  if (*ret_handle == NULL)
+    {
+      irqerr("Failed to get handle\n");
+      return ESP_ERR_NOT_FOUND;
+    }
 
   up_enable_irq(irq);
 
