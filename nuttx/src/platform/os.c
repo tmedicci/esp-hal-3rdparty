@@ -216,6 +216,17 @@ esp_err_t esp_os_intr_free(intr_handle_t handle)
 
 extern vector_desc_t *get_desc_for_int(int intno, int cpu);
 
+static int isr_adapter_func(int irq, void *context, void *arg)
+{
+  esp_os_intr_handler_t handler = (esp_os_intr_handler_t)arg;
+  if (handler)
+    {
+      handler(context);
+    }
+
+  return 0;
+}
+
 esp_err_t esp_os_intr_alloc(int source, int flags, esp_os_intr_handler_t handler, void *arg, intr_handle_t *ret_handle)
 {
   return esp_os_intr_alloc_intrstatus(source, flags, 0, 0, handler, arg, ret_handle);
@@ -226,7 +237,7 @@ esp_err_t esp_os_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatu
 {
   int ret;
   int irq = ESP_SOURCE2IRQ(source);
-  int cpuint = esp_setup_irq_with_flags_intrstatus(source, flags, intrstatusreg, intrstatusmask, handler, arg);
+  int cpuint = esp_setup_irq_with_flags_intrstatus(source, flags, intrstatusreg, intrstatusmask, isr_adapter_func, handler);
 
   *ret_handle = esp_get_handle(irq);
 

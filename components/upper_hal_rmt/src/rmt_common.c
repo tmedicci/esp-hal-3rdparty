@@ -46,7 +46,7 @@ rmt_group_t *rmt_acquire_group_handle(int group_id)
             new_group = true;
             s_platform.groups[group_id] = group;
             group->group_id = group_id;
-            INIT_CRIT_SECTION_LOCK_RUNTIME(group->spinlock);
+            INIT_CRIT_SECTION_LOCK_RUNTIME(&group->spinlock);
             // initial occupy_mask: 1111...100...0
             group->occupy_mask = UINT32_MAX & ~((1 << RMT_LL_GET(CHANS_PER_INST)) - 1);
             // group clock won't be configured at this stage, it will be set when allocate the first channel
