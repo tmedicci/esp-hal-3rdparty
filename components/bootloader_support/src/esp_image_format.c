@@ -88,7 +88,7 @@ static bool should_load(uint32_t load_addr);
 /* Return true if load_addr is an address the bootloader should map via flash cache */
 static bool should_map(uint32_t load_addr);
 
-esp_err_t process_segments(esp_image_metadata_t *data, bool silent, bool do_load, bootloader_sha256_handle_t sha_handle, uint32_t *checksum);
+static esp_err_t process_segments(esp_image_metadata_t *data, bool silent, bool do_load, bootloader_sha256_handle_t sha_handle, uint32_t *checksum);
 /* Load or verify a segment */
 static esp_err_t process_segment(int index, uint32_t flash_addr, esp_image_segment_header_t *header, bool silent, bool do_load, bootloader_sha256_handle_t sha_handle, uint32_t *checksum, esp_image_metadata_t *metadata);
 
