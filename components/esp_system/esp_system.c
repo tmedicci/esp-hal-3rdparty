@@ -6,10 +6,7 @@
 
 #include "esp_system.h"
 #include "esp_private/system_internal.h"
-#ifndef __NuttX__
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#endif
+#include "platform/os.h"
 #if CONFIG_ESP_SYSTEM_MEMPROT_FEATURE
 #if CONFIG_IDF_TARGET_ESP32S2
 #include "esp32s2/memprot.h"
@@ -46,7 +43,6 @@ esp_err_t esp_unregister_shutdown_handler(shutdown_handler_t handler)
     return ESP_ERR_INVALID_STATE;
 }
 
-#ifndef __NuttX__
 void esp_restart(void)
 {
     for (int i = SHUTDOWN_HANDLERS_NO - 1; i >= 0; i--) {
@@ -55,14 +51,7 @@ void esp_restart(void)
         }
     }
 
-#if ( ( CONFIG_FREERTOS_SMP ) && ( !CONFIG_FREERTOS_UNICORE ) )
-    //Note: Scheduler suspension behavior changed in FreeRTOS SMP
-    vTaskPreemptionDisable(NULL);
-#else
-    // Disable scheduler on this core.
-    vTaskSuspendAll();
-#endif // #if ( ( CONFIG_FREERTOS_SMP ) && ( !CONFIG_FREERTOS_UNICORE ) )
+    OS_PORT_SUSPEND_SCHEDULER();
 
     esp_restart_noos();
 }
-#endif

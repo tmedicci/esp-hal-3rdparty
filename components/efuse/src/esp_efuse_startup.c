@@ -38,11 +38,9 @@ ESP_LOG_ATTR_TAG(TAG, "efuse_init");
 ESP_SYSTEM_INIT_FN(init_efuse_check, CORE, BIT(0), 1)
 {
     // (Only for C3): We check if the efuse BLOCK0 has certain coding errors then reset the chip.
-#ifndef __NuttX__
     if (esp_efuse_check_errors() != ESP_OK) {
         esp_restart();
     }
-#endif
     return ESP_OK;
 }
 

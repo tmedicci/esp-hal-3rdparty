@@ -1,11 +1,22 @@
 #pragma once
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 #define OS_PORT_MAX_DELAY portMAX_DELAY
 #define OS_PORT_TICKS_TO_MS pdMS_TO_TICKS
 #define OS_BASE_TYPE BaseType_t
 #define OS_FALSE pdFALSE
 #define OS_TRUE pdTRUE
 #define OS_PORT_NUM_PROCESSORS portNUM_PROCESSORS
+
+#if ( ( CONFIG_FREERTOS_SMP ) && ( !CONFIG_FREERTOS_UNICORE ) )
+  //Note: Scheduler suspension behavior changed in FreeRFTOS SMP
+#define  OS_PORT_SUSPEND_SCHEDULER() vTaskPreemptionDisable(NULL);
+#else
+  // Disable scheduler on this core.
+#define  OS_PORT_SUSPEND_SCHEDULER() vTaskSuspendAll();
+#endif // #if ( ( CONFIG_FREERTOS_SMP ) && ( !CONFIG_FREERTOS_UNICORE ) )
 
 #define esp_os_spinlock_initialize(lock) spinlock_initialize(lock)
 

@@ -19,6 +19,7 @@
 #define traceISR_EXIT(param1)
 #define os_task_switch_is_pended(_cpu_) (false)
 #define OS_PORT_NUM_PROCESSORS CONFIG_FREERTOS_NUMBER_OF_CORES
+#define OS_PORT_SUSPEND_SCHEDULER() sched_lock();
 
 /* FreeRTOS type compatibility for NuttX */
 typedef uint32_t UBaseType_t;
