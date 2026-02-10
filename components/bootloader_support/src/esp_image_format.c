@@ -117,7 +117,7 @@ static esp_err_t verify_segment_header(int index, const esp_image_segment_header
     }                                               \
     while(0)
 
-esp_err_t process_image_header(esp_image_metadata_t *data, uint32_t part_offset, bootloader_sha256_handle_t *sha_handle, bool do_verify, bool silent);
+static esp_err_t process_image_header(esp_image_metadata_t *data, uint32_t part_offset, bootloader_sha256_handle_t *sha_handle, bool do_verify, bool silent);
 static esp_err_t process_appended_hash_and_sig(esp_image_metadata_t *data, uint32_t part_offset, uint32_t part_len, bool do_verify, bool silent);
 static esp_err_t process_checksum(bootloader_sha256_handle_t sha_handle, uint32_t checksum_word, esp_image_metadata_t *data, bool silent, bool skip_check_checksum);
 static esp_err_t __attribute__((unused)) verify_secure_boot_signature(bootloader_sha256_handle_t sha_handle, esp_image_metadata_t *data, uint8_t *image_digest, uint8_t *verified_digest);
@@ -354,8 +354,9 @@ esp_err_t bootloader_load_image_no_verify(const esp_partition_pos_t *part, esp_i
 {
 #ifdef BOOTLOADER_BUILD
     return image_load(ESP_IMAGE_LOAD_NO_VALIDATE, part, data);
-#endif
+#else
     return ESP_FAIL;
+#endif
 }
 
 esp_err_t esp_image_verify(esp_image_load_mode_t mode, const esp_partition_pos_t *part, esp_image_metadata_t *data)
@@ -450,12 +451,10 @@ static bool verify_load_addresses(int segment_index, intptr_t load_addr, intptr_
 
            (_dram_start.._dram_end includes bss, data, rodata sections in DRAM)
          */
-#ifndef CONFIG_ESPRESSIF_SIMPLE_BOOT
         if (bootloader_util_regions_overlap((intptr_t)&_dram_start, (intptr_t)&_dram_end, load_addr, load_end)) {
             reason = ESP_LOG_ATTR_STR("overlaps bootloader data");
             goto invalid;
         }
-#endif
 
         /* LAST DRAM CHECK (recursive): for D/IRAM, check the equivalent IRAM addresses if needed
 
@@ -559,7 +558,7 @@ static bool verify_load_addresses(int segment_index, intptr_t load_addr, intptr_
 }
 #endif // BOOTLOADER_BUILD
 
-esp_err_t process_image_header(esp_image_metadata_t *data, uint32_t part_offset, bootloader_sha256_handle_t *sha_handle, bool do_verify, bool silent)
+static esp_err_t process_image_header(esp_image_metadata_t *data, uint32_t part_offset, bootloader_sha256_handle_t *sha_handle, bool do_verify, bool silent)
 {
     esp_err_t err;
     bzero(data, sizeof(esp_image_metadata_t));
@@ -587,7 +586,7 @@ err:
     return err;
 }
 
-esp_err_t process_segments(esp_image_metadata_t *data, bool silent, bool do_load, bootloader_sha256_handle_t sha_handle, uint32_t *checksum)
+static esp_err_t process_segments(esp_image_metadata_t *data, bool silent, bool do_load, bootloader_sha256_handle_t sha_handle, uint32_t *checksum)
 {
     esp_err_t err = ESP_OK;
     uint32_t start_segments = data->start_addr + data->image_len;
