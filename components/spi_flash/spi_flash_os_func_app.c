@@ -20,6 +20,7 @@
 #include "esp_log.h"
 #include "esp_compiler.h"
 #include "esp_rom_sys.h"
+#include "esp_heap_caps.h"
 #include "esp_private/spi_flash_os.h"
 #include "esp_private/cache_utils.h"
 
@@ -239,16 +240,10 @@ static void* get_buffer_malloc(void* arg, size_t reqest_size, size_t* out_size)
     unsigned retries = 5;
     size_t read_chunk_size = reqest_size;
     while(ret == NULL && retries--) {
-#ifndef __NuttX__
         size_t largest_free = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
         read_chunk_size = MIN(read_chunk_size, largest_free);
-#endif
         read_chunk_size = (read_chunk_size + 3) & ~3;
-#ifndef __NuttX__
         ret = heap_caps_malloc(read_chunk_size, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-#else
-        ret = kmm_malloc(read_chunk_size);
-#endif
     }
     ESP_LOGV(TAG, "allocate temp buffer: %p (%d)", ret, read_chunk_size);
     *out_size = (ret != NULL? read_chunk_size: 0);
@@ -257,11 +252,7 @@ static void* get_buffer_malloc(void* arg, size_t reqest_size, size_t* out_size)
 
 static void release_buffer_malloc(void* arg, void *temp_buf)
 {
-#ifndef __NuttX__
-    free(temp_buf);
-#else
-    kmm_free(temp_buf);
-#endif
+    heap_caps_free(temp_buf);
 }
 
 static esp_err_t main_flash_region_protected(void* arg, size_t start_addr, size_t size)
@@ -340,12 +331,8 @@ esp_err_t esp_flash_init_os_functions(esp_flash_t *chip, int host_id, spi_bus_lo
         return ESP_ERR_INVALID_ARG;
     }
 
-#ifndef __NuttX__
     chip->os_func_data = heap_caps_malloc(sizeof(app_func_arg_t),
                                      MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-#else
-    chip->os_func_data = kmm_malloc(sizeof(app_func_arg_t));
-#endif
     if (chip->os_func_data == NULL) {
         return ESP_ERR_NO_MEM;
     }

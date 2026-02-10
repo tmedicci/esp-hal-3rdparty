@@ -29,7 +29,6 @@
 #include "gdma_priv.h"
 #include "esp_memory_utils.h"
 #include "esp_flash_encrypt.h"
-#include "esp_private/mem.h"
 #include "esp_private/irq.h"
 #include "platform/os.h"
 
@@ -98,11 +97,11 @@ static esp_err_t do_allocate_gdma_channel(const gdma_channel_search_info_t *sear
     }
     if (config->direction == GDMA_CHANNEL_DIRECTION_TX) {
         search_code |= SEARCH_REQUEST_TX_CHANNEL; // search TX only
-        alloc_tx_channel = esp_os_calloc_with_caps(1, sizeof(gdma_tx_channel_t), GDMA_MEM_ALLOC_CAPS);
+        alloc_tx_channel = heap_caps_calloc(1, sizeof(gdma_tx_channel_t), GDMA_MEM_ALLOC_CAPS);
         ESP_GOTO_ON_FALSE(alloc_tx_channel, ESP_ERR_NO_MEM, err, TAG, "no mem for gdma tx channel");
     } else if (config->direction == GDMA_CHANNEL_DIRECTION_RX) {
         search_code |= SEARCH_REQUEST_RX_CHANNEL; // search RX only
-        alloc_rx_channel = esp_os_calloc_with_caps(1, sizeof(gdma_rx_channel_t), GDMA_MEM_ALLOC_CAPS);
+        alloc_rx_channel = heap_caps_calloc(1, sizeof(gdma_rx_channel_t), GDMA_MEM_ALLOC_CAPS);
         ESP_GOTO_ON_FALSE(alloc_rx_channel, ESP_ERR_NO_MEM, err, TAG, "no mem for gdma rx channel");
     }
 
@@ -647,7 +646,7 @@ static gdma_group_t *gdma_acquire_group_handle(int group_id, void (*hal_init)(gd
 {
     bool new_group = false;
     gdma_group_t *group = NULL;
-    gdma_group_t *pre_alloc_group = esp_os_calloc_with_caps(1, sizeof(gdma_group_t), GDMA_MEM_ALLOC_CAPS);
+    gdma_group_t *pre_alloc_group = heap_caps_calloc(1, sizeof(gdma_group_t), GDMA_MEM_ALLOC_CAPS);
     if (!pre_alloc_group) {
         goto out;
     }
@@ -714,7 +713,7 @@ static gdma_pair_t *gdma_acquire_pair_handle(gdma_group_t *group, int pair_id)
 {
     bool new_pair = false;
     gdma_pair_t *pair = NULL;
-    gdma_pair_t *pre_alloc_pair = esp_os_calloc_with_caps(1, sizeof(gdma_pair_t), GDMA_MEM_ALLOC_CAPS);
+    gdma_pair_t *pre_alloc_pair = heap_caps_calloc(1, sizeof(gdma_pair_t), GDMA_MEM_ALLOC_CAPS);
     if (!pre_alloc_pair) {
         goto out;
     }

@@ -24,6 +24,7 @@
 #include "esp_timer.h"
 #include "esp_private/esp_sleep_internal.h"
 #include "esp_check.h"
+#include "esp_heap_caps.h"
 #include "sdkconfig.h"
 #ifdef __NuttX__
 #include <nuttx/mutex.h>
@@ -544,11 +545,7 @@ void esp_phy_modem_init(void)
     s_phy_modem_init_ref++;
 #if SOC_PM_MODEM_RETENTION_BY_BACKUPDMA
     if (s_phy_digital_regs_mem == NULL) {
-#ifdef __NuttX__
-        s_phy_digital_regs_mem = (uint32_t *)kmm_malloc(SOC_PHY_DIG_REGS_MEM_SIZE);
-#else
         s_phy_digital_regs_mem = (uint32_t *)heap_caps_malloc(SOC_PHY_DIG_REGS_MEM_SIZE, MALLOC_CAP_DMA|MALLOC_CAP_INTERNAL);
-#endif
     }
 #endif // SOC_PM_MODEM_RETENTION_BY_BACKUPDMA
 #if SOC_PM_SUPPORT_PMU_MODEM_STATE && CONFIG_ESP_WIFI_ENHANCED_LIGHT_SLEEP

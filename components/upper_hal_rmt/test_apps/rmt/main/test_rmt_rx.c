@@ -48,7 +48,7 @@ static bool test_rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx
 static void test_rmt_rx_nec_carrier(size_t mem_block_symbols, bool with_dma, rmt_clock_source_t clk_src)
 {
     uint32_t const test_rx_buffer_symbols = 128;
-    rmt_symbol_word_t *remote_codes = esp_os_calloc_with_caps(test_rx_buffer_symbols, sizeof(rmt_symbol_word_t),
+    rmt_symbol_word_t *remote_codes = heap_caps_calloc(test_rx_buffer_symbols, sizeof(rmt_symbol_word_t),
                                                        MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
     TEST_ASSERT_NOT_NULL(remote_codes);
 
@@ -234,7 +234,7 @@ static bool test_rmt_partial_receive_done(rmt_channel_handle_t channel, const rm
 static void test_rmt_partial_receive(size_t mem_block_symbols, int test_symbols_num, bool with_dma, rmt_clock_source_t clk_src)
 {
     uint32_t const test_rx_buffer_symbols = 128; // the user buffer is small, it can't hold all the received symbols
-    rmt_symbol_word_t *receive_user_buf = esp_os_calloc_with_caps(test_rx_buffer_symbols, sizeof(rmt_symbol_word_t),
+    rmt_symbol_word_t *receive_user_buf = heap_caps_calloc(test_rx_buffer_symbols, sizeof(rmt_symbol_word_t),
                                                            MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
     TEST_ASSERT_NOT_NULL(receive_user_buf);
 
@@ -334,7 +334,7 @@ static bool test_rmt_received_done(rmt_channel_handle_t channel, const rmt_rx_do
 static void test_rmt_receive_filter(rmt_clock_source_t clk_src)
 {
     uint32_t const test_rx_buffer_symbols = 32;
-    rmt_symbol_word_t *receive_user_buf = esp_os_calloc_with_caps(test_rx_buffer_symbols, sizeof(rmt_symbol_word_t),
+    rmt_symbol_word_t *receive_user_buf = heap_caps_calloc(test_rx_buffer_symbols, sizeof(rmt_symbol_word_t),
                                                            MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
     TEST_ASSERT_NOT_NULL(receive_user_buf);
 
@@ -466,7 +466,7 @@ static void test_rmt_unaligned_receive(size_t mem_block_symbols, int test_symbol
     } else {
         caps |= MALLOC_CAP_INTERNAL;
     }
-    rmt_symbol_word_t *receive_user_buf = esp_os_aligned_calloc_with_caps(64, test_rx_buffer_symbols, sizeof(rmt_symbol_word_t), caps);
+    rmt_symbol_word_t *receive_user_buf = heap_caps_aligned_calloc(64, test_rx_buffer_symbols, sizeof(rmt_symbol_word_t), caps);
     TEST_ASSERT_NOT_NULL(receive_user_buf);
     rmt_symbol_word_t *receive_user_buf_unaligned = (rmt_symbol_word_t *)((uint8_t *)receive_user_buf + 1);
     size_t receive_user_buf_unaligned_size = test_rx_buffer_symbols * sizeof(rmt_symbol_word_t) - 1;
@@ -522,7 +522,7 @@ static void test_rmt_unaligned_receive(size_t mem_block_symbols, int test_symbol
     // ready to receive
     TEST_ESP_OK(rmt_receive(rx_channel, receive_user_buf_unaligned, receive_user_buf_unaligned_size, &rx_config));
 
-    rmt_symbol_word_t *transmit_buf = esp_os_calloc_with_caps(test_symbols_num, sizeof(rmt_symbol_word_t),
+    rmt_symbol_word_t *transmit_buf = heap_caps_calloc(test_symbols_num, sizeof(rmt_symbol_word_t),
                                                        MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
     for (int i = 0; i < test_symbols_num; i++) {
         transmit_buf[i] = (rmt_symbol_word_t) {

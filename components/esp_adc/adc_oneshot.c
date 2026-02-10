@@ -15,8 +15,8 @@
 #include "stdatomic.h"
 #include "esp_log.h"
 #include "esp_check.h"
-#ifndef __NuttX__
 #include "esp_heap_caps.h"
+#ifndef __NuttX__
 #include "freertos/FreeRTOS.h"
 #endif
 #include "esp_private/gpio.h"

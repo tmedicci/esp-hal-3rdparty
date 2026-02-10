@@ -27,6 +27,7 @@
 #include "soc/mmu.h"
 #endif
 
+#include "esp_heap_caps.h"
 #include "esp_private/esp_mmu_map_private.h"
 #include "esp_mmu_map.h"
 #include "esp_rom_spiflash.h"
@@ -72,21 +73,13 @@ esp_err_t spi_flash_mmap(size_t src_addr, size_t size, spi_flash_mmap_memory_t m
     mmap_block_t *block = NULL;
     uint32_t *vaddr_list = NULL;
 
-#ifndef __NuttX__
     block = heap_caps_calloc(1, sizeof(mmap_block_t), MALLOC_CAP_INTERNAL);
-#else
-    block = kmm_calloc(1, sizeof(mmap_block_t));
-#endif // __NuttX__
     if (!block) {
         ret = ESP_ERR_NO_MEM;
         goto err;
     }
 
-#ifndef __NuttX__
     vaddr_list = heap_caps_calloc(1, 1 * sizeof(uint32_t), MALLOC_CAP_INTERNAL);
-#else
-    vaddr_list = kmm_calloc(1, 1 * sizeof(uint32_t));
-#endif // __NuttX__
     if (!vaddr_list) {
         ret = ESP_ERR_NO_MEM;
         goto err;
@@ -190,21 +183,13 @@ esp_err_t spi_flash_mmap_pages(const int *pages, size_t page_count, spi_flash_mm
     s_merge_contiguous_pages(pages, page_count, block_num, paddr_blocks);
     s_pages_to_bytes(paddr_blocks, block_num);
 
-#ifndef __NuttX__
     block = heap_caps_calloc(1, sizeof(mmap_block_t), MALLOC_CAP_INTERNAL);
-#else
-    block = kmm_calloc(1, sizeof(mmap_block_t));
-#endif // __NuttX__
     if (!block) {
         ret = ESP_ERR_NO_MEM;
         goto err;
     }
 
-#ifndef __NuttX__
     vaddr_list = heap_caps_calloc(1, block_num * sizeof(uint32_t), MALLOC_CAP_INTERNAL);
-#else
-    vaddr_list = kmm_calloc(1, block_num * sizeof(uint32_t));
-#endif // __NuttX__
     if (!vaddr_list) {
         ret = ESP_ERR_NO_MEM;
         goto err;

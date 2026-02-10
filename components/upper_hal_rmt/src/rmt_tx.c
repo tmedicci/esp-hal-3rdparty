@@ -60,8 +60,8 @@ static esp_err_t rmt_tx_init_dma_link(rmt_tx_channel_t *tx_channel, const rmt_tx
     gdma_get_alignment_constraints(tx_channel->base.dma_chan, &int_alignment, NULL);
     // apply RMT hardware alignment requirement
     int_alignment = MAX(int_alignment, sizeof(rmt_symbol_word_t));
-    // the memory returned by `esp_os_aligned_calloc_with_caps` also meets the cache alignment requirement (both address and size)
-    rmt_symbol_word_t *dma_mem_base = esp_os_aligned_calloc_with_caps(int_alignment, sizeof(rmt_symbol_word_t), config->mem_block_symbols,
+    // the memory returned by `heap_caps_aligned_calloc` also meets the cache alignment requirement (both address and size)
+    rmt_symbol_word_t *dma_mem_base = heap_caps_aligned_calloc(int_alignment, sizeof(rmt_symbol_word_t), config->mem_block_symbols,
                                                                RMT_MEM_ALLOC_CAPS | MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
     ESP_RETURN_ON_FALSE(dma_mem_base, ESP_ERR_NO_MEM, TAG, "no mem for tx DMA buffer");
     tx_channel->dma_mem_base = dma_mem_base;
@@ -278,7 +278,7 @@ esp_err_t rmt_new_tx_channel(const rmt_tx_channel_config_t *config, rmt_channel_
 #endif // SOC_RMT_SUPPORT_SLEEP_RETENTION
 
     // allocate channel memory from internal memory because it contains atomic variable
-    tx_channel = esp_os_calloc_with_caps(1, sizeof(rmt_tx_channel_t) + sizeof(rmt_tx_trans_desc_t) * config->trans_queue_depth, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    tx_channel = heap_caps_calloc(1, sizeof(rmt_tx_channel_t) + sizeof(rmt_tx_trans_desc_t) * config->trans_queue_depth, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     ESP_GOTO_ON_FALSE(tx_channel, ESP_ERR_NO_MEM, err, TAG, "no mem for tx channel");
     // GPIO configuration is not done yet
     tx_channel->base.gpio_num = -1;
@@ -393,7 +393,7 @@ esp_err_t rmt_new_sync_manager(const rmt_sync_manager_config_t *config, rmt_sync
     esp_err_t ret = ESP_OK;
     rmt_sync_manager_t *synchro = NULL;
     ESP_GOTO_ON_FALSE(config && ret_synchro && config->tx_channel_array && config->array_size, ESP_ERR_INVALID_ARG, err, TAG, "invalid argument");
-    synchro = esp_os_calloc_with_caps(1, sizeof(rmt_sync_manager_t) + sizeof(rmt_channel_handle_t) * config->array_size, RMT_MEM_ALLOC_CAPS);
+    synchro = heap_caps_calloc(1, sizeof(rmt_sync_manager_t) + sizeof(rmt_channel_handle_t) * config->array_size, RMT_MEM_ALLOC_CAPS);
     ESP_GOTO_ON_FALSE(synchro, ESP_ERR_NO_MEM, err, TAG, "no mem for sync manager");
     for (size_t i = 0; i < config->array_size; i++) {
         synchro->tx_channel_array[i] = config->tx_channel_array[i];

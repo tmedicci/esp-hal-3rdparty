@@ -26,7 +26,6 @@
 #include "esp_private/io_mux.h"
 #include "esp_private/critical_section.h"
 #include "esp_private/irq.h"
-#include "esp_private/mem.h"
 #include "platform/os.h"
 
 #if (SOC_RTCIO_PIN_COUNT > 0)
@@ -539,7 +538,7 @@ esp_err_t gpio_install_isr_service(int intr_alloc_flags)
     GPIO_CHECK(gpio_context.gpio_isr_func == NULL, "GPIO isr service already installed", ESP_ERR_INVALID_STATE);
     esp_err_t ret = ESP_ERR_NO_MEM;
     const uint32_t alloc_caps = (intr_alloc_flags & ESP_INTR_FLAG_IRAM) ? MALLOC_CAP_INTERNAL : MALLOC_CAP_DEFAULT;
-    gpio_isr_func_t *isr_func = (gpio_isr_func_t *) esp_os_calloc_with_caps(GPIO_NUM_MAX, sizeof(gpio_isr_func_t), alloc_caps);
+    gpio_isr_func_t *isr_func = (gpio_isr_func_t *) heap_caps_calloc(GPIO_NUM_MAX, sizeof(gpio_isr_func_t), alloc_caps);
     if (isr_func) {
         esp_os_enter_critical(&gpio_context.gpio_spinlock);
         if (gpio_context.gpio_isr_func == NULL) {

@@ -497,7 +497,3 @@ bool esp_efuse_utility_is_correct_written_data(esp_efuse_block_t block, unsigned
     }
     return correct_written_data;
 }
-
-#ifdef __NuttX__
-#undef BOOTLOADER_BUILD
-#endif

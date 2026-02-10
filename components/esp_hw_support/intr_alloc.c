@@ -26,7 +26,6 @@
 #include "esp_heap_caps.h"
 #include "esp_private/rtc_ctrl.h"
 #include "esp_private/critical_section.h"
-#include "esp_private/mem.h"
 #include "soc/interrupts.h"
 #include "soc/soc_caps.h"
 #include "sdkconfig.h"
@@ -179,7 +178,7 @@ vector_desc_t *get_desc_for_int(int intno, int cpu)
 {
     vector_desc_t *vd = find_desc_for_int(intno, cpu);
     if (vd == NULL) {
-        vector_desc_t *newvd = esp_os_malloc_with_caps(sizeof(vector_desc_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+        vector_desc_t *newvd = heap_caps_malloc(sizeof(vector_desc_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
         if (newvd == NULL) {
             return NULL;
         }
@@ -581,7 +580,7 @@ esp_err_t esp_intr_alloc_intrstatus_bind(int source, int flags, uint32_t intrsta
     }
 
     //Allocate a return handle. If we end up not needing it, we'll free it later on.
-    ret = esp_os_malloc_with_caps(sizeof(intr_handle_data_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    ret = heap_caps_malloc(sizeof(intr_handle_data_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     if (ret == NULL) {
         return ESP_ERR_NO_MEM;
     }
@@ -618,7 +617,7 @@ esp_err_t esp_intr_alloc_intrstatus_bind(int source, int flags, uint32_t intrsta
     //Allocate that int!
     if (flags & ESP_INTR_FLAG_SHARED) {
         //Populate vector entry and add to linked list.
-        shared_vector_desc_t *sh_vec = esp_os_malloc_with_caps(sizeof(shared_vector_desc_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+        shared_vector_desc_t *sh_vec = heap_caps_malloc(sizeof(shared_vector_desc_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
         if (sh_vec == NULL) {
             esp_os_exit_critical(&spinlock);
             free(ret);
@@ -641,7 +640,7 @@ esp_err_t esp_intr_alloc_intrstatus_bind(int source, int flags, uint32_t intrsta
         vd->flags = VECDESC_FL_NONSHARED;
         if (handler) {
 #if CONFIG_ESP_TRACE_ENABLE
-            non_shared_isr_arg_t *ns_isr_arg = esp_os_malloc_with_caps(sizeof(non_shared_isr_arg_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+            non_shared_isr_arg_t *ns_isr_arg = heap_caps_malloc(sizeof(non_shared_isr_arg_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
             if (!ns_isr_arg) {
                 esp_os_exit_critical(&spinlock);
                 free(ret);

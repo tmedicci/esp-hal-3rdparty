@@ -13,7 +13,6 @@
 #include "esp_irq.h"
 
 #include "esp_private/critical_section.h"
-#include "esp_private/mem.h"
 #include "esp_private/irq.h"
 
 #include "platform/os.h"
@@ -175,33 +174,6 @@ static esp_err_t esp_os_queue_receive_generic(esp_os_queue_handle_t queue,
   return ret >= 0 ? ESP_OK : ESP_FAIL;
 }
 
-void *esp_os_calloc_with_caps(size_t n, size_t size, uint32_t caps)
-{
-  return kmm_calloc(n, size);
-}
-
-void *esp_os_aligned_calloc_with_caps(size_t alignment, size_t n, size_t size, uint32_t caps)
-{
-  size_t size_bytes;
-  if (__builtin_mul_overflow(n, size, &size_bytes))
-    {
-      return NULL;
-    }
-
-  void *ptr = kmm_memalign(alignment, size_bytes);
-  if(ptr != NULL)
-    {
-      memset(ptr, 0, size_bytes);
-    }
-
-  return ptr;
-}
-
-
-void *esp_os_malloc_with_caps(size_t size, uint32_t caps)
-{
-  return kmm_malloc(size);
-}
 
 esp_err_t esp_os_intr_free(intr_handle_t handle)
 {

@@ -18,6 +18,7 @@
 #include "freertos/timers.h"
 #include "esp_intr_alloc.h"
 #endif
+#include "esp_heap_caps.h"
 #include "sys/lock.h"
 #include "esp_private/rtc_ctrl.h"
 #include "esp_private/critical_section.h"
@@ -122,11 +123,7 @@ esp_err_t rtc_isr_register(intr_handler_t handler, void* handler_arg, uint32_t r
         return err;
     }
 
-#ifdef __NuttX__
-    rtc_isr_handler_t* item = kmm_malloc(sizeof(*item));
-#else
     rtc_isr_handler_t* item = heap_caps_malloc(sizeof(*item), MALLOC_CAP_INTERNAL);
-#endif
     if (item == NULL) {
         return ESP_ERR_NO_MEM;
     }

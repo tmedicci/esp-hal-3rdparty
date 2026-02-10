@@ -14,9 +14,7 @@
 #include "esp_rom_gpio.h"
 #include "esp_rom_efuse.h"
 #include "esp_log.h"
-#ifndef __NuttX__
 #include "esp_heap_caps.h"
-#endif
 #include "hal/spi_types.h"
 #include "esp_private/spi_share_hw_ctrl.h"
 #include "esp_ldo_regulator.h"
@@ -377,24 +375,16 @@ esp_err_t spi_bus_add_flash_device(esp_flash_t **out_chip, const esp_flash_spi_d
     memspi_host_inst_t *host = NULL;
     esp_err_t ret = ESP_OK;
 
-#ifndef __NuttX__
     uint32_t caps = MALLOC_CAP_DEFAULT;
     if (config->host_id == SPI1_HOST) caps = MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT;
 
     chip = (esp_flash_t*)heap_caps_malloc(sizeof(esp_flash_t), caps);
-#else
-    chip = (esp_flash_t*)kmm_malloc(sizeof(esp_flash_t));
-#endif // __NuttX__
     if (!chip) {
         ret = ESP_ERR_NO_MEM;
         goto fail;
     }
 
-#ifndef __NuttX__
     host = (memspi_host_inst_t*)heap_caps_malloc(sizeof(memspi_host_inst_t), caps);
-#else
-    host = (memspi_host_inst_t*)kmm_malloc(sizeof(memspi_host_inst_t));
-#endif // __NuttX__
     *chip = (esp_flash_t) {
         .read_mode = config->io_mode,
         .host = (spi_flash_host_inst_t*)host,

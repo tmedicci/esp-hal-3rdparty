@@ -41,7 +41,6 @@
 #include "esp_clk_tree.h"
 #include "esp_pm.h"
 #include "esp_attr.h"
-#include "esp_private/mem.h"
 #include "esp_private/irq.h"
 #include "esp_private/queue.h"
 #include "esp_private/critical_section.h"

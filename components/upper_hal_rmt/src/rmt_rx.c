@@ -210,7 +210,7 @@ esp_err_t rmt_new_rx_channel(const rmt_rx_channel_config_t *config, rmt_channel_
 #endif // SOC_RMT_SUPPORT_SLEEP_RETENTION
 
     // allocate channel memory from internal memory because it contains atomic variable
-    rx_channel = esp_os_calloc_with_caps(1, sizeof(rmt_rx_channel_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    rx_channel = heap_caps_calloc(1, sizeof(rmt_rx_channel_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     ESP_GOTO_ON_FALSE(rx_channel, ESP_ERR_NO_MEM, err, TAG, "no mem for rx channel");
     // gpio is not configured yet
     rx_channel->base.gpio_num = -1;

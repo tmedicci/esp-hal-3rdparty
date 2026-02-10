@@ -41,7 +41,7 @@ rmt_group_t *rmt_acquire_group_handle(int group_id)
     // prevent install rmt group concurrently
     _lock_acquire(&s_platform.mutex);
     if (!s_platform.groups[group_id]) {
-        group = esp_os_calloc_with_caps(1, sizeof(rmt_group_t), RMT_MEM_ALLOC_CAPS);
+        group = heap_caps_calloc(1, sizeof(rmt_group_t), RMT_MEM_ALLOC_CAPS);
         if (group) {
             new_group = true;
             s_platform.groups[group_id] = group;

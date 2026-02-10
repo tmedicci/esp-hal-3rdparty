@@ -21,5 +21,5 @@ esp_err_t rmt_encoder_reset(rmt_encoder_handle_t encoder)
 
 void *rmt_alloc_encoder_mem(size_t size)
 {
-    return esp_os_calloc_with_caps(1, size, RMT_MEM_ALLOC_CAPS);
+    return heap_caps_calloc(1, size, RMT_MEM_ALLOC_CAPS);
 }

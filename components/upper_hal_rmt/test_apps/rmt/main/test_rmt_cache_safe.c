@@ -131,7 +131,7 @@ static bool test_rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx
 static void test_rmt_rx_cache_safe(size_t mem_block_symbols, bool with_dma, rmt_clock_source_t clk_src)
 {
     uint32_t const test_rx_buffer_symbols = 128;
-    rmt_symbol_word_t *remote_codes = esp_os_aligned_calloc_with_caps(64, test_rx_buffer_symbols, sizeof(rmt_symbol_word_t),
+    rmt_symbol_word_t *remote_codes = heap_caps_aligned_calloc(64, test_rx_buffer_symbols, sizeof(rmt_symbol_word_t),
                                                                MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
     TEST_ASSERT_NOT_NULL(remote_codes);
 

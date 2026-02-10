@@ -172,7 +172,7 @@ TEST_CASE("rmt single transaction", "[rmt]")
 static void test_rmt_ping_pong_trans(size_t mem_block_symbols, bool with_dma)
 {
     const int test_led_num = 10000;
-    uint8_t *leds_grb = esp_os_malloc_with_caps(3 * test_led_num, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    uint8_t *leds_grb = heap_caps_malloc(3 * test_led_num, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     TEST_ASSERT_NOT_NULL(leds_grb);
 
     rmt_tx_channel_config_t tx_channel_cfg = {
