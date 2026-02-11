@@ -20,18 +20,18 @@ void nuttx_enter_critical(void)
 
   int cpu = this_cpu();
 
-#if OS_SPINLOCK == 1
-  flags = rspin_lock_irqsave(lock);
-#else
-  flags = up_irq_save();
-#endif
-
   if (g_int_flags_count[cpu] == 0)
     {
+      flags = up_irq_save();
+
       /* First time acquiring this lock */
 
       g_int_flags[cpu] = flags;
     }
+
+#if OS_SPINLOCK == 1
+  rspin_lock(lock);
+#endif
 
   g_int_flags_count[cpu]++;
 }
@@ -45,11 +45,14 @@ void nuttx_exit_critical(void)
 {
   int cpu = this_cpu();
 
+  g_int_flags_count[cpu]--;
+
 #if OS_SPINLOCK == 1
-  rspin_unlock_irqrestore(lock, g_int_flags[cpu]);
-#else
-  up_irq_restore(g_int_flags[cpu]);
+  rspin_unlock(lock);
 #endif
 
-  g_int_flags_count[cpu]--;
+  if (g_int_flags_count[cpu] == 0)
+    {
+      up_irq_restore(g_int_flags[cpu]);
+    }
 }
