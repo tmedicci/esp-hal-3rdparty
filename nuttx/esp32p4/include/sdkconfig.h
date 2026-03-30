@@ -8,6 +8,9 @@
 
 #include <nuttx/config.h>
 
+#define CONFIG_ESP_TIMER_TASK_STACK_SIZE 3584
+#define CONFIG_ESP_TIMER_TASK_AFFINITY 0
+
 #ifdef CONFIG_SMP
 #  define CONFIG_FREERTOS_NUMBER_OF_CORES 2
 #  define CONFIG_ESP_IPC_ENABLE 1
