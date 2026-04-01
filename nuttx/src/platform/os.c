@@ -823,15 +823,21 @@ void esp_os_application_sleep(void)
 
   if (idle_ticks > 0)
     {
+      uint32_t current_idle_time_us;
       vApplicationSleep(idle_ticks);
 
       /* Entering auto light sleep may be skipped by esp_pm_skip_light_sleep
        * so we need to ensure that up_idlepm is called periodically to
        * re-check the idle time. This is done by triggering an oneshot timer
-       * that will call up_idlepm after CONFIG_PM_ALARM_SEC seconds.
+       * that will call up_idlepm after CONFIG_PM_ALARM_SEC seconds if there
+       * is still enough idle time.
        */
 
-      up_timer_start(&ts);
+      current_idle_time_us = up_get_idletime();
+      if (current_idle_time_us == 0)
+        {
+          up_timer_start(&ts);
+        }
     }
 #endif
 }
