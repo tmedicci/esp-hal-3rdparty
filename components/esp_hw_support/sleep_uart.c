@@ -80,14 +80,6 @@ static SLEEP_UART_FN_ATTR esp_sleep_uart_handling_mode_t get_uart_handling_mode(
     if (handling == ESP_SLEEP_AUTO_FLUSH_SUSPEND_UART) {
         // Default: flush for deep sleep, suspend for light sleep
         handling = deep_sleep ? ESP_SLEEP_ALWAYS_FLUSH_UART : ESP_SLEEP_ALWAYS_SUSPEND_UART;
-#if (CONFIG_ESP_CONSOLE_UART_NUM != -1)
-        /* NuttX console traffic can keep TX FSM busy during PM entry.
-         * Avoid blocking auto light-sleep by flushing console UART instead of suspending it.
-         */
-        if (is_console_uart && !deep_sleep) {
-            handling = ESP_SLEEP_ALWAYS_FLUSH_UART;
-        }
-#endif
 #if SOC_PM_SUPPORT_TOP_PD
         // If TOP domain (where UART belongs) is powered down during sleep:
         // - Console UART: flush to preserve debug output
