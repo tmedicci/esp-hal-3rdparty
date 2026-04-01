@@ -805,6 +805,10 @@ void esp_os_application_sleep(void)
 #ifdef CONFIG_PM
   uint32_t idle_us;
   TickType_t idle_ticks;
+  struct timespec ts;
+
+  ts.tv_sec = CONFIG_PM_ALARM_SEC;
+  ts.tv_nsec = CONFIG_PM_ALARM_NSEC;
 
   /* The device can sleep for a maximum of CONFIG_PM_ALARM_SEC seconds
    * plus CONFIG_PM_ALARM_NSEC nanoseconds. This doesn't mean that this is
@@ -820,6 +824,14 @@ void esp_os_application_sleep(void)
   if (idle_ticks > 0)
     {
       vApplicationSleep(idle_ticks);
+
+      /* Entering auto light sleep may be skipped by esp_pm_skip_light_sleep
+       * so we need to ensure that up_idlepm is called periodically to
+       * re-check the idle time. This is done by triggering an oneshot timer
+       * that will call up_idlepm after CONFIG_PM_ALARM_SEC seconds.
+       */
+
+      up_timer_start(&ts);
     }
 #endif
 }
