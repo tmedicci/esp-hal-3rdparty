@@ -16,7 +16,7 @@ if(CONFIG_SOC_GDMA_SUPPORTED)
         list(APPEND srcs "src/gdma_etm.c")
     endif()
     if(CONFIG_SOC_GDMA_SUPPORT_CRC)
-        list(APPEND srcs "src/gdma_crc.c")
+        list(APPEND srcs "src/gdma_crc.c" "src/esp_async_crc.c" "src/async_crc_gdma.c")
     endif()
 endif()
 
@@ -41,7 +41,7 @@ endif()
 idf_component_register(SRCS ${srcs}
                        INCLUDE_DIRS ${public_include}
                        REQUIRES ${requires}
-                       PRIV_REQUIRES esp_mm
+                       PRIV_REQUIRES esp_mm efuse
                        LDFRAGMENTS "linker.lf"
                       )
 

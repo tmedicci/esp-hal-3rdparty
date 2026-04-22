@@ -10,7 +10,7 @@ TEST_CASE("ana_cmpr unit install/uninstall", "[ana_cmpr]")
 {
     ana_cmpr_handle_t cmpr = NULL;
     ana_cmpr_config_t config = {
-        .unit = SOC_ANA_CMPR_NUM,   // Set a wrong unit
+        .unit = 100,   // Set a wrong unit
         .clk_src = ANA_CMPR_CLK_SRC_DEFAULT,
         .ref_src = ANA_CMPR_REF_SRC_INTERNAL,
         .cross_type = ANA_CMPR_CROSS_ANY,
@@ -44,7 +44,7 @@ TEST_CASE("ana_cmpr unit install/uninstall", "[ana_cmpr]")
     /* Try to set internal reference for a external unit */
     config.ref_src = ANA_CMPR_REF_SRC_EXTERNAL;
     TEST_ESP_OK(ana_cmpr_new_unit(&config, &cmpr));
-    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, ana_cmpr_set_internal_reference(cmpr, &ref_cfg));
+    TEST_ESP_ERR(ESP_ERR_NOT_ALLOWED, ana_cmpr_set_internal_reference(cmpr, &ref_cfg));
     TEST_ESP_ERR(ESP_ERR_INVALID_ARG, ana_cmpr_del_unit(NULL));
     TEST_ESP_OK(ana_cmpr_del_unit(cmpr));
 }

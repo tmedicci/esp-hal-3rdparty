@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -340,8 +340,8 @@ esp_err_t parlio_new_tx_unit(const parlio_tx_unit_config_t *config, parlio_tx_un
     if (data_width < 8) {
         parlio_ll_tx_set_bit_pack_order(hal->regs, config->bit_pack_order);
     }
-    // set sample clock edge
-    parlio_ll_tx_set_sample_clock_edge(hal->regs, config->sample_edge);
+
+    parlio_ll_tx_set_shift_clock_edge(hal->regs, config->shift_edge);
 
     // clear any pending interrupt
     parlio_ll_clear_interrupt_status(hal->regs, PARLIO_LL_EVENT_TX_MASK);
@@ -666,8 +666,8 @@ esp_err_t parlio_tx_unit_transmit(parlio_tx_unit_handle_t tx_unit, const void *p
 
     size_t alignment = esp_ptr_external_ram(payload) ? tx_unit->ext_mem_align : tx_unit->int_mem_align;
     // check alignment
-    ESP_RETURN_ON_FALSE(((uint32_t)payload & (alignment - 1)) == 0, ESP_ERR_INVALID_ARG, TAG, "payload address not aligned");
-    ESP_RETURN_ON_FALSE((payload_bits & (alignment - 1)) == 0, ESP_ERR_INVALID_ARG, TAG, "payload size not aligned");
+    ESP_RETURN_ON_FALSE(((uint32_t)payload & (alignment - 1)) == 0, ESP_ERR_INVALID_ARG, TAG, "payload address %p not aligned to %d", payload, alignment);
+    ESP_RETURN_ON_FALSE((payload_bits & (alignment - 1)) == 0, ESP_ERR_INVALID_ARG, TAG, "payload size %d not aligned to %d", payload_bits, alignment);
 
     if (esp_cache_get_line_size_by_addr(payload) > 0) {
         // Write back to cache to synchronize the cache before DMA start

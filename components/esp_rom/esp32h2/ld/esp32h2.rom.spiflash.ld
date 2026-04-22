@@ -19,11 +19,11 @@
 
 /* Functions */
 #ifdef __NuttX__
-PROVIDE( spi_flash_disable_cache = 0x400001e8 );
-PROVIDE( spi_flash_restore_cache = 0x400001ec );
+PROVIDE( rom_spi_flash_disable_cache = 0x400001e8 );
+PROVIDE( rom_spi_flash_restore_cache = 0x400001ec );
 #else
-spi_flash_disable_cache = 0x400001e8;
-spi_flash_restore_cache = 0x400001ec;
+rom_spi_flash_disable_cache = 0x400001e8;
+rom_spi_flash_restore_cache = 0x400001ec;
 #endif
 spi_flash_cache_enabled = 0x400001f0;
 esp_enable_cache_flash_wrap = 0x400001f8;

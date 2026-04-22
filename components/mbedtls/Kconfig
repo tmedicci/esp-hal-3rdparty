@@ -32,7 +32,7 @@ menu "mbedTLS"
 
         config MBEDTLS_THREADING_C
             bool "Enable the threading abstraction layer"
-            default n
+            default y
             help
                 If you do intend to use contexts between threads, you will need to enable
                 this layer to prevent race conditions.
@@ -40,14 +40,14 @@ menu "mbedTLS"
         config MBEDTLS_THREADING_ALT
             bool "Enable threading alternate implementation"
             depends on MBEDTLS_THREADING_C
-            default y
+            default n
             help
                 Enable threading alt to allow your own alternate threading implementation.
 
         config MBEDTLS_THREADING_PTHREAD
             bool "Enable threading pthread implementation"
             depends on MBEDTLS_THREADING_C
-            default n
+            default y
             help
                 Enable the pthread wrapper layer for the threading layer.
 
@@ -1162,12 +1162,6 @@ menu "mbedTLS"
     endmenu
 
     menu "Hash functions"
-        config MBEDTLS_POLY1305_C
-            bool "Poly1305 MAC algorithm"
-            default n
-            help
-                Enable support for Poly1305 MAC algorithm.
-
         config MBEDTLS_RIPEMD160_C
             bool "Enable RIPEMD-160 hash algorithm"
             default n
@@ -1543,6 +1537,13 @@ menu "mbedTLS"
             help
                 This option enables hardware acceleration for ECDSA sign function, only
                 when using ATECC608A cryptoauth chip.
+
+        config MBEDTLS_HARDWARE_RSA_DS_PERIPHERAL
+            bool "Enable hardware RSA digital signature peripheral acceleration"
+            default n
+            depends on SOC_DIG_SIGN_SUPPORTED
+            help
+                Enable hardware accelerated digital signature peripheral for RSA digital signature generation.
     endmenu
 
     menu "Entropy and Random Number Generation"
@@ -1611,7 +1612,7 @@ menu "mbedTLS"
         config MBEDTLS_CHACHAPOLY_C
             bool "ChaCha20-Poly1305 AEAD algorithm"
             default n
-            depends on MBEDTLS_CHACHA20_C && MBEDTLS_POLY1305_C
+            depends on MBEDTLS_CHACHA20_C
             help
                 Enable support for ChaCha20-Poly1305 AEAD algorithm.
 

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2015-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2015-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,12 +13,13 @@
 #include "soc/lldesc.h"
 #include "soc/soc_caps.h"
 #include "soc/soc.h"   //for SOC_NON_CACHEABLE_OFFSET_SRAM
+#include "soc/spi_periph.h"
 #include "hal/spi_slave_hd_hal.h"
 #include "hal/assert.h"
 
 void spi_slave_hd_hal_init(spi_slave_hd_hal_context_t *hal, const spi_slave_hd_hal_config_t *hal_config)
 {
-    spi_dev_t *hw = SPI_LL_GET_HW(hal_config->host_id);
+    spi_dev_t *hw = spi_periph_signal[hal_config->host_id].hw;
     hal->dev = hw;
     hal->dma_enabled = hal_config->dma_enabled;
     hal->append_mode = hal_config->append_mode;
@@ -154,14 +155,18 @@ static spi_ll_intr_t get_event_intr(spi_slave_hd_hal_context_t *hal, spi_event_t
     return intr;
 }
 
-bool spi_slave_hd_hal_check_clear_event(spi_slave_hd_hal_context_t *hal, spi_event_t ev)
+bool spi_slave_hd_hal_check_clear_intr(spi_slave_hd_hal_context_t *hal, uint32_t mask)
 {
-    spi_ll_intr_t intr = get_event_intr(hal, ev);
-    if (spi_ll_get_intr(hal->dev, intr)) {
-        spi_ll_clear_intr(hal->dev, intr);
+    if (spi_ll_get_intr(hal->dev, mask)) {
+        spi_ll_clear_intr(hal->dev, mask);
         return true;
     }
     return false;
+}
+
+bool spi_slave_hd_hal_check_clear_event(spi_slave_hd_hal_context_t *hal, spi_event_t ev)
+{
+    return spi_slave_hd_hal_check_clear_intr(hal, get_event_intr(hal, ev));
 }
 
 bool spi_slave_hd_hal_check_disable_event(spi_slave_hd_hal_context_t *hal, spi_event_t ev)

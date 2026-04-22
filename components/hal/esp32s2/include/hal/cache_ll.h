@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -30,6 +30,25 @@ extern "C" {
 #define CACHE_LL_LEVEL_NUMS                              1   //Number of cache levels
 #define CACHE_LL_L1_ICACHE_AUTOLOAD                      (1<<0)
 #define CACHE_LL_L1_DCACHE_AUTOLOAD                      (1<<0)
+
+/**
+ * @brief Preload strategy
+ */
+typedef enum {
+    CACHE_LL_PRELOAD_UNTIL_FETCH_DONE = 0,
+    CACHE_LL_PRELOAD_AFTER_FETCH = 1,
+    CACHE_LL_PRELOAD_ARBITRARY = 2,
+} cache_ll_preload_strategy_t;
+
+
+/**
+ * @brief Initialize the cache clock
+ */
+__attribute__((always_inline))
+static inline void cache_ll_clk_init(void)
+{
+    //for compatibility
+}
 
 /**
  * @brief Check if ICache auto preload is enabled or not
@@ -88,6 +107,75 @@ static inline bool cache_ll_is_cache_autoload_enabled(uint32_t cache_level, cach
         break;
     }
     return enabled;
+}
+
+/**
+ * @brief Set the preload strategy (no-op)
+ */
+__attribute__((always_inline))
+static inline void cache_ll_preload_set_strategy(uint32_t cache_level, cache_type_t type, uint32_t cache_id, cache_ll_preload_strategy_t strategy)
+{
+    (void)cache_level;
+    (void)type;
+    (void)cache_id;
+    (void)strategy;
+}
+
+/**
+ * @brief Preload cache
+ *
+ * @param cache_level  level of the cache (must be CACHE_LL_LEVEL_EXT_MEM)
+ * @param type         see `cache_type_t` (INSTRUCTION, DATA, or ALL)
+ * @param cache_id     id of the cache (unused on S2; pass 0 or CACHE_LL_ID_ALL)
+ * @param vaddr        start virtual address of the preload region
+ * @param size         size of the preload region in bytes
+ * @param order        preload order, see `cache_preload_order_t`
+ */
+__attribute__((always_inline))
+static inline void cache_ll_preload(uint32_t cache_level, cache_type_t type, uint32_t cache_id, uint32_t vaddr, uint32_t size, cache_preload_order_t order)
+{
+    (void)cache_id;
+    HAL_ASSERT(cache_level == CACHE_LL_LEVEL_EXT_MEM);
+    switch (type) {
+    case CACHE_TYPE_INSTRUCTION:
+        Cache_Start_ICache_Preload(vaddr, size, order);
+        break;
+    case CACHE_TYPE_DATA:
+        Cache_Start_DCache_Preload(vaddr, size, order);
+        break;
+    case CACHE_TYPE_ALL:
+    default:
+        Cache_Start_ICache_Preload(vaddr, size, order);
+        Cache_Start_DCache_Preload(vaddr, size, order);
+        break;
+    }
+}
+
+/**
+ * @brief Wait until cache preload is done (L1 only)
+ */
+__attribute__((always_inline))
+static inline void cache_ll_preload_wait_done(uint32_t cache_level, cache_type_t type, uint32_t cache_id)
+{
+    (void)cache_id;
+    HAL_ASSERT(cache_level == CACHE_LL_LEVEL_EXT_MEM);
+    switch (type) {
+    case CACHE_TYPE_INSTRUCTION:
+        while (Cache_ICache_Preload_Done() == 0) {
+        }
+        break;
+    case CACHE_TYPE_DATA:
+        while (Cache_DCache_Preload_Done() == 0) {
+        }
+        break;
+    case CACHE_TYPE_ALL:
+    default:
+        while (Cache_ICache_Preload_Done() == 0) {
+        }
+        while (Cache_DCache_Preload_Done() == 0) {
+        }
+        break;
+    }
 }
 
 /**

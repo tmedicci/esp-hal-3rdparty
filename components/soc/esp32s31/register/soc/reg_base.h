@@ -73,7 +73,7 @@
 #define DR_REG_IO_MUX_BASE                        0x20582000
 #define DR_REG_GPIO_BASE                          0x20583000
 #define DR_REG_GPIO_EXT_BASE                      0x20583E00
-#define DR_REG_MSPI_IOMUX_BASE                    0x20584000
+#define DR_REG_IOMUX_MSPI_PIN_BASE                0x20584000
 #define DR_REG_INTR0_BASE                         0x20585000
 #define DR_REG_HP_SYS_BASE                        0x20586000
 #define DR_REG_HP_SYS_CLKRST_BASE                 0x20587000
@@ -81,8 +81,8 @@
 #define DR_REG_HP_ALIVE_SYS_BASE                  0x20589000
 #define DR_REG_HP_PERI1_PMS_BASE                  0x2058A000
 #define DR_REG_LP_SYS_BASE                        0x20700000
-#define DR_REG_LP_CLKRST_BASE                     0x20701000
-#define DR_REG_LP_ANA_PERI_BASE                   0x20702000
+#define DR_REG_LP_AONCLKRST_BASE                  0x20701000
+#define DR_REG_LP_ANA_BASE                        0x20702000
 #define DR_REG_HUK_BASE                           0x20703000
 #define DR_REG_PMU_BASE                           0x20704000
 #define DR_REG_TOUCH_AON_BASE                     0x20705000
@@ -94,8 +94,8 @@
 #define DR_REG_LP_GPIO_BASE                       0x20713000
 #define DR_REG_LP_INTR_BASE                       0x20714000
 #define DR_REG_EFUSE_BASE                         0x20715000
-#define DR_REG_LP_TIMER_BASE                      0x20800000
-#define DR_REG_LP_WDT_BASE                        0x20801000
+#define DR_REG_RTC_TIMER_BASE                     0x20800000
+#define DR_REG_RTC_WDT_BASE                       0x20801000
 #define DR_REG_RTCLOCKCALI0_BASE                  0x20802000
 #define DR_REG_RTCLOCKCALI1_BASE                  0x20803000
 #define DR_REG_LP_PWR_REG_BASE                    0x20804000
@@ -137,7 +137,9 @@
 #define DR_REG_INTERRUPT_CORE0_BASE             DR_REG_INTR0_BASE
 #define DR_REG_INTERRUPT_CORE1_BASE             (DR_REG_INTR0_BASE + 0x800)
 #define DR_REG_LPPERI_BASE                      DR_REG_LP_PERICLKRST_BASE
+#define DR_REG_LP_PWR_BASE                      DR_REG_LP_PWR_REG_BASE  /* alias used by lp_pwr_reg.h */
 #define DR_REG_SDHOST_BASE                      DR_REG_SDMMC_BASE
 #define DR_REG_TRACE_BASE                       DR_REG_TRACE0_BASE
 #define DR_REG_MB_BASE                          DR_REG_LP_MAILBOX_BASE
 #define DR_REG_AXI_IC_BASE                      (DR_REG_ICM_SYS_BASE + 0x400)
+#define IEEE802154_REG_BASE                     0x20103000

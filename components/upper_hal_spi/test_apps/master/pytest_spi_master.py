@@ -41,7 +41,7 @@ def test_master_single_dev_esp32c5(case_tester) -> None:  # type: ignore
 
 
 @pytest.mark.generic
-@pytest.mark.esp32c5_eco3
+@pytest.mark.esp32c5_rev1
 @pytest.mark.parametrize(
     'config',
     [
@@ -50,7 +50,7 @@ def test_master_single_dev_esp32c5(case_tester) -> None:  # type: ignore
     indirect=True,
 )
 @idf_parametrize('target', ['esp32c5'], indirect=['target'])
-def test_master_single_dev_esp32c5_eco3(case_tester) -> None:  # type: ignore
+def test_master_single_dev_esp32c5_rev1(case_tester) -> None:  # type: ignore
     for case in case_tester.test_menu:
         if 'test_env' in case.attributes:
             continue  # If `test_env` is defined, should not run on generic runner
@@ -85,5 +85,6 @@ def test_master_esp_flash(case_tester) -> None:  # type: ignore
     indirect=True,
 )
 @idf_parametrize('target', ['supported_targets'], indirect=['target'])
+@pytest.mark.temp_skip_ci(targets=['esp32s31'], reason='no runner')
 def test_master_multi_dev(case_tester) -> None:  # type: ignore
     case_tester.run_all_multi_dev_cases(reset=True)

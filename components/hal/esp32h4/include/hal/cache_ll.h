@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -33,6 +33,25 @@ extern "C" {
 #define CACHE_LL_LEVEL_ALL                          2   //All of the cache levels, make this value greater than any level
 #define CACHE_LL_LEVEL_NUMS                         1   //Number of cache levels
 #define CACHE_LL_CACHE_AUTOLOAD                     (1<<0)
+
+/**
+ * @brief Preload strategy
+ */
+typedef enum {
+    CACHE_LL_PRELOAD_UNTIL_FETCH_DONE = 0,
+    CACHE_LL_PRELOAD_AFTER_FETCH = 1,
+    CACHE_LL_PRELOAD_ARBITRARY = 2,
+} cache_ll_preload_strategy_t;
+
+
+/**
+ * @brief Initialize the cache clock
+ */
+__attribute__((always_inline))
+static inline void cache_ll_clk_init(void)
+{
+    //for compatibility
+}
 
 /**
  * @brief Check if L1 ICache autoload is enabled or not
@@ -678,6 +697,79 @@ static inline void cache_ll_unfreeze_cache(uint32_t cache_level, cache_type_t ty
             cache_ll_l1_unfreeze_icache(CACHE_LL_ID_ALL);
             break;
         }
+    }
+}
+
+/*------------------------------------------------------------------------------
+ * Cache Preload
+ *----------------------------------------------------------------------------*/
+/**
+ * @brief Set the preload strategy (no-op)
+ */
+__attribute__((always_inline))
+static inline void cache_ll_preload_set_strategy(uint32_t cache_level, cache_type_t type, uint32_t cache_id, cache_ll_preload_strategy_t strategy)
+{
+    (void)cache_level;
+    (void)type;
+    (void)cache_id;
+    (void)strategy;
+}
+
+/**
+ * @brief Preload cache (L1 only)
+ *
+ * Starts preload for the given map and does not wait. Use cache_ll_preload_wait_done() to wait for completion.
+ *
+ * @param cache_level  level of the cache (must be CACHE_LL_LEVEL_EXT_MEM)
+ * @param type         see `cache_type_t` (selects instruction/data/all cache map)
+ * @param cache_id     id of the cache (unused on H4; pass 0)
+ * @param vaddr        start virtual address of the preload region
+ * @param size         size of the preload region in bytes
+ * @param order        preload order, see `cache_preload_order_t`
+ */
+__attribute__((always_inline))
+static inline void cache_ll_preload(uint32_t cache_level, cache_type_t type, uint32_t cache_id, uint32_t vaddr, uint32_t size, cache_preload_order_t order)
+{
+    (void)cache_id;
+    HAL_ASSERT(cache_level == CACHE_LL_LEVEL_EXT_MEM);
+    uint32_t map;
+    switch (type) {
+    case CACHE_TYPE_INSTRUCTION:
+        map = CACHE_MAP_ICACHE0 | CACHE_MAP_ICACHE1;
+        break;
+    case CACHE_TYPE_DATA:
+        map = CACHE_MAP_DCACHE;
+        break;
+    case CACHE_TYPE_ALL:
+    default:
+        map = CACHE_MAP_ALL;
+        break;
+    }
+    Cache_Start_Preload(map, vaddr, size, order);
+}
+
+/**
+ * @brief Wait until cache preload is done (L1 only)
+ */
+__attribute__((always_inline))
+static inline void cache_ll_preload_wait_done(uint32_t cache_level, cache_type_t type, uint32_t cache_id)
+{
+    (void)cache_id;
+    HAL_ASSERT(cache_level == CACHE_LL_LEVEL_EXT_MEM);
+    uint32_t map;
+    switch (type) {
+    case CACHE_TYPE_INSTRUCTION:
+        map = CACHE_MAP_ICACHE0 | CACHE_MAP_ICACHE1;
+        break;
+    case CACHE_TYPE_DATA:
+        map = CACHE_MAP_DCACHE;
+        break;
+    case CACHE_TYPE_ALL:
+    default:
+        map = CACHE_MAP_ALL;
+        break;
+    }
+    while (Cache_Preload_Done(map) == 0) {
     }
 }
 

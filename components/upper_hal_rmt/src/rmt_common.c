@@ -1,11 +1,11 @@
 /*
- * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #include "rmt_private.h"
-#include "clk_ctrl_os.h"
+#include "esp_clk_tree.h"
 #include "soc/rtc.h"
 #include "driver/gpio.h"
 
@@ -39,8 +39,6 @@ rmt_group_t *rmt_acquire_group_handle(int group_id)
             group->occupy_mask = UINT32_MAX & ~((1 << RMT_LL_GET(CHANS_PER_INST)) - 1);
             // group clock won't be configured at this stage, it will be set when allocate the first channel
             group->clk_src = 0;
-            // group interrupt priority is shared between all channels, it will be set when allocate the first channel
-            group->intr_priority = RMT_GROUP_INTR_PRIORITY_UNINITIALIZED;
             // enable the bus clock for the RMT peripheral
             PERIPH_RCC_ATOMIC() {
                 rmt_ll_enable_bus_clock(group_id, true);
@@ -83,7 +81,6 @@ rmt_group_t *rmt_acquire_group_handle(int group_id)
 void rmt_release_group_handle(rmt_group_t *group)
 {
     int group_id = group->group_id;
-    rmt_clock_source_t clk_src = group->clk_src;
     bool do_deinitialize = false;
     rmt_hal_context_t *hal = &group->hal;
 
@@ -104,16 +101,6 @@ void rmt_release_group_handle(rmt_group_t *group)
         }
     }
     _lock_release(&s_platform.mutex);
-
-    switch (clk_src) {
-#if RMT_LL_SUPPORT(RC_FAST)
-    case RMT_CLK_SRC_RC_FAST:
-        periph_rtc_dig_clk8m_disable();
-        break;
-#endif // RMT_LL_SUPPORT(RC_FAST)
-    default:
-        break;
-    }
 
     if (do_deinitialize) {
 #if RMT_USE_RETENTION_LINK
@@ -197,17 +184,8 @@ esp_err_t rmt_select_periph_clock(rmt_channel_handle_t chan, rmt_clock_source_t 
         clock_selection_conflict = (group->clk_src != clk_src);
     }
     esp_os_exit_critical(&group->spinlock);
-    ESP_RETURN_ON_FALSE(!clock_selection_conflict, ESP_ERR_INVALID_ARG, TAG,
+    ESP_RETURN_ON_FALSE(!clock_selection_conflict, ESP_ERR_INVALID_STATE, TAG,
                         "group clock conflict, already is %d but attempt to %d", group->clk_src, clk_src);
-
-    // TODO: [clk_tree] to use a generic clock enable/disable or acquire/release function for all clock source
-#if RMT_LL_SUPPORT(RC_FAST)
-    if (clk_src == RMT_CLK_SRC_RC_FAST) {
-        // RC_FAST clock is not enabled automatically on start up, we enable it here manually.
-        // Note there's a ref count in the enable/disable function, we must call them in pair in the driver.
-        periph_rtc_dig_clk8m_enable();
-    }
-#endif // RMT_LL_SUPPORT(RC_FAST)
 
 #if CONFIG_PM_ENABLE
     // if DMA is not used, we're using CPU to push the data to the RMT FIFO
@@ -217,8 +195,7 @@ esp_err_t rmt_select_periph_clock(rmt_channel_handle_t chan, rmt_clock_source_t 
     // note, even if the clock source is APB, we still use CPU_FREQ_MAX lock to ensure the stability of the RMT operation.
     esp_pm_lock_type_t pm_lock_type = chan->dma_chan ? ESP_PM_NO_LIGHT_SLEEP : ESP_PM_CPU_FREQ_MAX;
 
-    sprintf(chan->pm_lock_name, "rmt_%d_%d", group->group_id, chan->channel_id); // e.g. rmt_0_0
-    ret  = esp_pm_lock_create(pm_lock_type, 0, chan->pm_lock_name, &chan->pm_lock);
+    ret = esp_pm_lock_create(pm_lock_type, 0, soc_rmt_signals[group->group_id].module_name, &chan->pm_lock);
     ESP_RETURN_ON_ERROR(ret, TAG, "create pm lock failed");
 #endif // CONFIG_PM_ENABLE
 
@@ -227,8 +204,8 @@ esp_err_t rmt_select_periph_clock(rmt_channel_handle_t chan, rmt_clock_source_t 
 #if RMT_LL_GET(CHANNEL_CLK_INDEPENDENT)
     uint32_t periph_src_clk_hz = 0;
     // get clock source frequency
-    ESP_RETURN_ON_ERROR(esp_clk_tree_src_get_freq_hz((soc_module_clk_t)clk_src, ESP_CLK_TREE_SRC_FREQ_PRECISION_CACHED, &periph_src_clk_hz),
-                        TAG, "get clock source frequency failed");
+    ESP_GOTO_ON_ERROR(esp_clk_tree_src_get_freq_hz((soc_module_clk_t)clk_src, ESP_CLK_TREE_SRC_FREQ_PRECISION_CACHED, &periph_src_clk_hz),
+                      err, TAG, "get clock source frequency failed");
     PERIPH_RCC_ATOMIC() {
         rmt_ll_set_group_clock_src(group->hal.regs, chan->channel_id, clk_src, 1, 1, 0);
         rmt_ll_enable_group_clock(group->hal.regs, true);
@@ -238,7 +215,7 @@ esp_err_t rmt_select_periph_clock(rmt_channel_handle_t chan, rmt_clock_source_t 
     real_div = (group->resolution_hz + expect_channel_resolution / 2) / expect_channel_resolution;
 #else
     // set division for group clock source, to achieve highest resolution while guaranteeing the channel resolution.
-    ESP_RETURN_ON_ERROR(rmt_set_group_prescale(chan, expect_channel_resolution, &real_div), TAG, "set rmt group prescale failed");
+    ESP_GOTO_ON_ERROR(rmt_set_group_prescale(chan, expect_channel_resolution, &real_div), err, TAG, "set rmt group prescale failed");
 #endif // RMT_LL_GET(CHANNEL_CLK_INDEPENDENT)
 
     if (chan->direction == RMT_CHANNEL_DIRECTION_TX) {
@@ -251,6 +228,10 @@ esp_err_t rmt_select_periph_clock(rmt_channel_handle_t chan, rmt_clock_source_t 
     if (chan->resolution_hz != expect_channel_resolution) {
         ESP_LOGW(TAG, "channel resolution loss, real=%"PRIu32, chan->resolution_hz);
     }
+    return ret;
+
+err:
+    esp_clk_tree_enable_src((soc_module_clk_t)clk_src, false);
     return ret;
 }
 
@@ -291,52 +272,6 @@ esp_err_t rmt_disable(rmt_channel_handle_t channel)
 {
     ESP_RETURN_ON_FALSE(channel, ESP_ERR_INVALID_ARG, TAG, "invalid argument");
     return channel->disable(channel);
-}
-
-bool rmt_set_intr_priority_to_group(rmt_group_t *group, int intr_priority)
-{
-    bool priority_conflict = false;
-    esp_os_enter_critical(&group->spinlock);
-    if (group->intr_priority == RMT_GROUP_INTR_PRIORITY_UNINITIALIZED) {
-        // intr_priority never allocated, accept user's value unconditionally
-        // intr_priority could only be set once here
-        group->intr_priority = intr_priority;
-    } else {
-        // group intr_priority already specified
-        // If interrupt priority specified before, it CANNOT BE CHANGED until `rmt_release_group_handle()` called
-        // So we have to check if the new priority specified conflicts with the old one
-        if (intr_priority) {
-            // User specified intr_priority, check if conflict or not
-            // Even though the `group->intr_priority` is 0, an intr_priority must have been specified automatically too,
-            // although we do not know it exactly now, so specifying the intr_priority again might also cause conflict.
-            // So no matter if `group->intr_priority` is 0 or not, we have to check.
-            // Value `0` of `group->intr_priority` means "unknown", NOT "unspecified"!
-            if (intr_priority != (group->intr_priority)) {
-                // intr_priority conflicts!
-                priority_conflict = true;
-            }
-        }
-        // else do nothing
-        // user did not specify intr_priority, then keep the old priority
-        // We'll use the `RMT_INTR_ALLOC_FLAG | RMT_ALLOW_INTR_PRIORITY_MASK`, which should always success
-    }
-    // The `group->intr_priority` will not change any longer, even though another task tries to modify it.
-    // So we could exit critical here safely.
-    esp_os_exit_critical(&group->spinlock);
-    return priority_conflict;
-}
-
-int rmt_isr_priority_to_flags(rmt_group_t *group)
-{
-    int isr_flags = 0;
-    if (group->intr_priority) {
-        // Use user-specified priority bit
-        isr_flags |= (1 << (group->intr_priority));
-    } else {
-        // Allow all LOWMED priority bits
-        isr_flags |= RMT_ALLOW_INTR_PRIORITY_MASK;
-    }
-    return isr_flags;
 }
 
 #if RMT_USE_RETENTION_LINK

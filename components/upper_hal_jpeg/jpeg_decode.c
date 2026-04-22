@@ -265,12 +265,18 @@ esp_err_t jpeg_decoder_process(jpeg_decoder_handle_t decoder_engine, const jpeg_
     };
 
     // Before 2DDMA starts. sync buffer from cache to psram
-    ret = esp_cache_msync((void*)decoder_engine->header_info->buffer_offset, decoder_engine->header_info->buffer_left, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
-    assert(ret == ESP_OK);
+    size_t cache_line_size = esp_cache_get_line_size_by_addr(decoder_engine->header_info->buffer_offset);
+    if (cache_line_size > 0) {
+        ret = esp_cache_msync((void*)decoder_engine->header_info->buffer_offset, decoder_engine->header_info->buffer_left, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
+        assert(ret == ESP_OK);
+    }
 
     // Before 2DDMA starts, invalidate cache ahead of time.
-    ret = esp_cache_msync((void*)decoder_engine->decoded_buf, outbuf_size, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
-    assert(ret == ESP_OK);
+    cache_line_size = esp_cache_get_line_size_by_addr(decoder_engine->decoded_buf);
+    if (cache_line_size > 0) {
+        ret = esp_cache_msync((void*)decoder_engine->decoded_buf, outbuf_size, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
+        assert(ret == ESP_OK);
+    }
 
     ESP_GOTO_ON_ERROR(dma2d_enqueue(decoder_engine->dma2d_group_handle, &trans_desc, decoder_engine->trans_desc), err2, TAG, "enqueue dma2d failed");
     bool need_yield;
@@ -290,8 +296,11 @@ esp_err_t jpeg_decoder_process(jpeg_decoder_handle_t decoder_engine, const jpeg_
 
         if (jpeg_dma2d_event.dma_evt & JPEG_DMA2D_RX_EOF) {
             if (outbuf_cache_line_size > 0) {
-                ret = esp_cache_msync((void*)decoder_engine->decoded_buf, outbuf_size, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
-                assert(ret == ESP_OK);
+                size_t cache_line_size = esp_cache_get_line_size_by_addr(decoder_engine->decoded_buf);
+                if (cache_line_size > 0) {
+                    ret = esp_cache_msync((void*)decoder_engine->decoded_buf, outbuf_size, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
+                    assert(ret == ESP_OK);
+                }
             }
             break;
         }
@@ -385,9 +394,12 @@ static void cfg_desc(jpeg_decoder_handle_t decoder_engine, dma2d_descriptor_t *d
     dsc->ha_length  = ha;
     dsc->buffer     = buf;
     dsc->next       = next_dsc;
-    esp_err_t ret = esp_cache_msync((void*)dsc, decoder_engine->dma_desc_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_INVALIDATE);
-    assert(ret == ESP_OK);
-    (void)ret;
+    uint32_t line_size = esp_cache_get_line_size_by_addr(dsc);
+    if (line_size > 0) {
+        esp_err_t ret = esp_cache_msync((void*)dsc, decoder_engine->dma_desc_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_INVALIDATE);
+        assert(ret == ESP_OK);
+        (void)ret;
+    }
 }
 
 static esp_err_t jpeg_dec_config_dma_descriptor(jpeg_decoder_handle_t decoder_engine)
@@ -526,13 +538,15 @@ static void jpeg_dec_config_dma_trans_ability(jpeg_decoder_handle_t decoder_engi
 {
     // set transfer ability
     dma2d_transfer_ability_t transfer_ability_config_tx = {
-        .data_burst_length = DMA2D_DATA_BURST_LENGTH_128,
+        .access_ext_mem = true, // in most cases
+        .data_burst_length = 128,
         .desc_burst_en = true,
         .mb_size = DMA2D_MACRO_BLOCK_SIZE_NONE,
     };
 
     dma2d_transfer_ability_t transfer_ability_config_rx = {
-        .data_burst_length = DMA2D_DATA_BURST_LENGTH_128,
+        .access_ext_mem = true, // in most cases
+        .data_burst_length = 128,
         .desc_burst_en = true,
         .mb_size = DMA2D_MACRO_BLOCK_SIZE_NONE,
     };
@@ -633,6 +647,17 @@ static esp_err_t jpeg_color_space_support_check(jpeg_decoder_handle_t decoder_en
         }
     }
 #endif
+    if (decoder_engine->sample_method == JPEG_DOWN_SAMPLING_GRAY) {
+        if (decoder_engine->output_format != JPEG_DECODE_OUT_FORMAT_GRAY) {
+            ESP_LOGE(TAG, "Detected GRAY but want to convert to other format, which is not supported");
+            return ESP_ERR_INVALID_ARG;
+        }
+    } else {
+        if (decoder_engine->output_format == JPEG_DECODE_OUT_FORMAT_GRAY) {
+            ESP_LOGE(TAG, "Detected not GRAY but want to convert to GRAY, which is not supported");
+            return ESP_ERR_INVALID_ARG;
+        }
+    }
     return ESP_OK;
 }
 

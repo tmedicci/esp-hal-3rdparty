@@ -1,10 +1,6 @@
 # Documentation: .gitlab/ci/README.md#manifest-file-to-control-the-buildtest-apps
 
 components/spi_flash/test_apps/esp_flash:
-  disable:
-    - if: IDF_TARGET in ["esp32s31"]
-      temporary: true
-      reason: not support yet # TODO: TODO: [esp32s31] IDF-14777
   depends_filepatterns:
     - components/bootloader_support/bootloader_flash/**/*
   depends_components:
@@ -37,10 +33,6 @@ components/spi_flash/test_apps/esp_flash_freq_limit:
     - esp_hw_support
 
 components/spi_flash/test_apps/esp_flash_stress:
-  disable:
-    - if: IDF_TARGET in ["esp32s31"]
-      temporary: true
-      reason: not support yet # TODO: [ESP32S31] IDF-14777
   depends_components:
     - *common_components
     - esp_mm
@@ -78,7 +70,6 @@ components/spi_flash/test_apps/flash_mmap:
     - if: CONFIG_NAME == "xip_psram_with_rom_impl" and SOC_SPIRAM_XIP_SUPPORTED == 1 and IDF_TARGET != "esp32s2"
   disable:
     - if: IDF_TARGET == "esp32c61" and CONFIG_NAME == "xip_psram_with_rom_impl"
-    - if: IDF_TARGET == "esp32s31" # TODO: IDF-14669
       temporary: true
       reason: not supported yet  # TODO: [ESP32C61] IDF-12784
 

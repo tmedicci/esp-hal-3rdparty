@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -63,13 +63,19 @@ esp_err_t rtc_gpio_deinit(gpio_num_t gpio_num)
 {
     ESP_RETURN_ON_FALSE(rtc_gpio_is_valid_gpio(gpio_num), ESP_ERR_INVALID_ARG, RTCIO_TAG, "RTCIO number error");
     esp_os_enter_critical(&rtc_spinlock);
-    // Select Gpio as Digital Gpio
-    rtcio_hal_function_select(rtc_io_number_get(gpio_num), RTCIO_LL_FUNC_DIGITAL);
-
-    // TODO: IDF-14951 Turning off the lp io clock might affect other lp peripherals. Temporary disabled.
-#if SOC_LP_IO_CLOCK_IS_INDEPENDENT && !CONFIG_IDF_TARGET_ESP32H4
-    io_mux_force_disable_lp_io_clock(gpio_num);
+    if (io_mux_is_lp_io_in_use(gpio_num)) {
+        // Select GPIO as Digital GPIO
+        rtcio_hal_function_select(rtc_io_number_get(gpio_num), RTCIO_LL_FUNC_DIGITAL);
+#if SOC_RTCIO_INPUT_OUTPUT_SUPPORTED
+        // Disable any configuration of the RTC IO that may affect the GPIO behavior
+        rtc_gpio_set_direction(gpio_num, RTC_GPIO_MODE_DISABLED);
+        rtc_gpio_pullup_dis(gpio_num);
+        rtc_gpio_pulldown_dis(gpio_num);
 #endif
+#if SOC_LP_IO_CLOCK_IS_INDEPENDENT
+        io_mux_force_disable_lp_io_clock(gpio_num);
+#endif
+    }
     esp_os_exit_critical(&rtc_spinlock);
 
     return ESP_OK;
@@ -181,6 +187,24 @@ esp_err_t rtc_gpio_iomux_func_sel(gpio_num_t gpio_num, int func)
     rtcio_hal_iomux_func_sel(rtc_io_number_get(gpio_num), func);
     esp_os_exit_critical(&rtc_spinlock);
 
+    return ESP_OK;
+}
+
+esp_err_t rtc_gpio_iomux_input(gpio_num_t gpio_num, int func, uint32_t signal_idx)
+{
+    ESP_RETURN_ON_FALSE(rtc_gpio_is_valid_gpio(gpio_num), ESP_ERR_INVALID_ARG, RTCIO_TAG, "RTCIO number error");
+    esp_os_enter_critical(&rtc_spinlock);
+    rtcio_hal_iomux_input(rtc_io_number_get(gpio_num), func, signal_idx);
+    esp_os_exit_critical(&rtc_spinlock);
+    return ESP_OK;
+}
+
+esp_err_t rtc_gpio_iomux_output(gpio_num_t gpio_num, int func)
+{
+    ESP_RETURN_ON_FALSE(rtc_gpio_is_valid_gpio(gpio_num), ESP_ERR_INVALID_ARG, RTCIO_TAG, "RTCIO number error");
+    esp_os_enter_critical(&rtc_spinlock);
+    rtcio_hal_iomux_output(rtc_io_number_get(gpio_num), func);
+    esp_os_exit_critical(&rtc_spinlock);
     return ESP_OK;
 }
 

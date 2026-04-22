@@ -35,6 +35,7 @@
 #include "esp_private/periph_ctrl.h"
 #include "esp_private/critical_section.h"
 #include "esp_private/sleep_retention.h"
+#include "esp_efuse.h"
 
 #if CONFIG_GDMA_OBJ_DRAM_SAFE
 #define GDMA_MEM_ALLOC_CAPS    (MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)
@@ -76,6 +77,7 @@ struct gdma_channel_t {
     DECLARE_CRIT_SECTION_LOCK_IN_STRUCT(spinlock)  // channel level spinlock
     gdma_channel_direction_t direction; // channel direction
     int periph_id; // Peripheral instance ID, indicates which peripheral is connected to this GDMA channel
+    int intr_priority; // interrupt priority, if set to 0, the driver will use the default priority
     size_t int_mem_alignment; // alignment for memory in internal memory
     size_t ext_mem_alignment; // alignment for memory in external memory
     esp_err_t (*del)(gdma_channel_t *channel); // channel deletion function, it's polymorphic, see `gdma_del_tx_channel` or `gdma_del_rx_channel`

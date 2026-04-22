@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: CC0-1.0
 import pytest
 from pytest_embedded import Dut
@@ -31,6 +31,7 @@ def test_i2c(dut: Dut) -> None:
     indirect=True,
 )
 @idf_parametrize('target', soc_filtered_targets('SOC_I2C_SUPPORTED == 1'), indirect=['target'])
+@pytest.mark.temp_skip_ci(targets=['esp32s31'], reason='lack of s31 multi-device runner # TODO: IDFCI-10334')
 def test_i2c_multi_device(case_tester) -> None:  # type: ignore
     case_tester.run_all_multi_dev_cases(reset=True)
 

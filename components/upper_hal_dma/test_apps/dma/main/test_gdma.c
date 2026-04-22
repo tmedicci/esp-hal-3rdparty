@@ -24,6 +24,7 @@
 #include "esp_cache.h"
 #include "esp_memory_utils.h"
 #include "gdma_test_utils.h"
+#include "esp_efuse.h"
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 #define ALIGN_DOWN(num, align)  ((num) & ~((align) - 1))
@@ -276,7 +277,7 @@ static void test_gdma_m2m_transaction(gdma_channel_handle_t tx_chan, gdma_channe
     TEST_ASSERT_NOT_NULL(done_sem);
     TEST_ESP_OK(gdma_register_rx_event_callbacks(rx_chan, &rx_cbs, done_sem));
 
-    if (efuse_hal_flash_encryption_enabled()) {
+    if (esp_efuse_is_flash_encryption_enabled()) {
         dma_link_in_ext_mem = false;
     }
 
@@ -306,7 +307,7 @@ static void test_gdma_m2m_transaction(gdma_channel_handle_t tx_chan, gdma_channe
     }
     // test DMA can read data from main flash
 #if SOC_DMA_CAN_ACCESS_FLASH
-    static const char src_string[] __attribute__((aligned(GDMA_LL_GET(ACCESS_ENCRYPTION_MEM_ALIGNMENT)))) = "GDMA can read MSPI Flash data!!!";
+    static const char src_string[] __attribute__((aligned(SOC_MEMSPI_ENCRYPTION_ALIGNMENT))) = "GDMA can read MSPI Flash data!!!";
     size_t src_string_len = strlen(src_string);
     TEST_ASSERT_TRUE(esp_ptr_in_drom(src_string));
 
@@ -455,6 +456,98 @@ static bool test_gdma_m2m_unaligned_rx_eof_callback(gdma_channel_handle_t dma_ch
     return task_woken == pdTRUE;
 }
 
+static bool test_gdma_m2m_desc_empty_callback(gdma_channel_handle_t dma_chan, gdma_event_data_t *event_data, void *user_data)
+{
+    BaseType_t task_woken = pdFALSE;
+    SemaphoreHandle_t desc_empty_sem = (SemaphoreHandle_t)user_data;
+    xSemaphoreGiveFromISR(desc_empty_sem, &task_woken);
+    return task_woken == pdTRUE;
+}
+
+static void test_gdma_m2m_desc_empty_event(gdma_channel_handle_t tx_chan, gdma_channel_handle_t rx_chan)
+{
+    gdma_link_list_handle_t tx_link_list = NULL;
+    gdma_link_list_handle_t rx_link_list = NULL;
+    test_gdma_config_link_list(tx_chan, rx_chan, &tx_link_list, &rx_link_list, 16, false);
+
+    uint8_t *src_data = heap_caps_aligned_calloc(16, 1, 128, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    uint8_t *dst_data = heap_caps_aligned_calloc(16, 1, 64, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    TEST_ASSERT_NOT_NULL(src_data);
+    TEST_ASSERT_NOT_NULL(dst_data);
+    for (int i = 0; i < 128; i++) {
+        src_data[i] = i;
+    }
+
+    gdma_buffer_mount_config_t tx_buf_mount_config = {
+        .buffer = src_data,
+        .buffer_alignment = 16,
+        .length = 128,
+        .flags = {
+            .mark_eof = true,
+            .mark_final = GDMA_FINAL_LINK_TO_NULL,
+        },
+    };
+    TEST_ESP_OK(gdma_link_mount_buffers(tx_link_list, 0, &tx_buf_mount_config, 1, NULL));
+
+    gdma_buffer_mount_config_t rx_buf_mount_config = {
+        .buffer = dst_data,
+        .buffer_alignment = 16,
+        .length = 64,
+        .flags = {
+            .mark_final = GDMA_FINAL_LINK_TO_NULL,
+        },
+    };
+    TEST_ESP_OK(gdma_link_mount_buffers(rx_link_list, 0, &rx_buf_mount_config, 1, NULL));
+
+    SemaphoreHandle_t desc_empty_sem = xSemaphoreCreateBinary();
+    TEST_ASSERT_NOT_NULL(desc_empty_sem);
+    gdma_rx_event_callbacks_t rx_cbs = {
+        .on_descr_empty = test_gdma_m2m_desc_empty_callback,
+    };
+    TEST_ESP_OK(gdma_register_rx_event_callbacks(rx_chan, &rx_cbs, desc_empty_sem));
+
+    TEST_ESP_OK(gdma_start(rx_chan, gdma_link_get_head_addr(rx_link_list)));
+    TEST_ESP_OK(gdma_start(tx_chan, gdma_link_get_head_addr(tx_link_list)));
+
+    TEST_ASSERT_EQUAL(pdTRUE, xSemaphoreTake(desc_empty_sem, pdMS_TO_TICKS(1000)));
+
+    TEST_ESP_OK(gdma_stop(tx_chan));
+    TEST_ESP_OK(gdma_stop(rx_chan));
+    TEST_ESP_OK(gdma_del_link_list(tx_link_list));
+    TEST_ESP_OK(gdma_del_link_list(rx_link_list));
+    vSemaphoreDelete(desc_empty_sem);
+    free(src_data);
+    free(dst_data);
+}
+
+TEST_CASE("GDMA M2M RX desc empty callback", "[GDMA][M2M]")
+{
+    gdma_channel_handle_t tx_chan = NULL;
+    gdma_channel_handle_t rx_chan = NULL;
+    gdma_channel_alloc_config_t chan_alloc_config = {};
+
+#if SOC_HAS(AHB_GDMA)
+    TEST_ESP_OK(gdma_new_ahb_channel(&chan_alloc_config, &tx_chan, &rx_chan));
+    test_gdma_m2m_desc_empty_event(tx_chan, rx_chan);
+    TEST_ESP_OK(gdma_del_channel(tx_chan));
+    TEST_ESP_OK(gdma_del_channel(rx_chan));
+#endif // SOC_HAS(AHB_GDMA)
+
+#if SOC_HAS(AXI_GDMA)
+    TEST_ESP_OK(gdma_new_axi_channel(&chan_alloc_config, &tx_chan, &rx_chan));
+    test_gdma_m2m_desc_empty_event(tx_chan, rx_chan);
+    TEST_ESP_OK(gdma_del_channel(tx_chan));
+    TEST_ESP_OK(gdma_del_channel(rx_chan));
+#endif // SOC_HAS(AXI_GDMA)
+
+#if SOC_HAS(LP_AHB_GDMA)
+    TEST_ESP_OK(gdma_new_lp_ahb_channel(&chan_alloc_config, &tx_chan, &rx_chan));
+    test_gdma_m2m_desc_empty_event(tx_chan, rx_chan);
+    TEST_ESP_OK(gdma_del_channel(tx_chan));
+    TEST_ESP_OK(gdma_del_channel(rx_chan));
+#endif // SOC_HAS(LP_AHB_GDMA)
+}
+
 static void test_gdma_m2m_unaligned_buffer_test(uint8_t *dst_data, uint8_t *src_data, size_t data_length, size_t offset_len)
 {
     TEST_ASSERT_NOT_NULL(src_data);
@@ -538,7 +631,7 @@ static void test_gdma_m2m_unaligned_buffer_test(uint8_t *dst_data, uint8_t *src_
 
 TEST_CASE("GDMA M2M Unaligned RX Buffer Test", "[GDMA][M2M]")
 {
-    if (efuse_hal_flash_encryption_enabled()) {
+    if (esp_efuse_is_flash_encryption_enabled()) {
         TEST_PASS_MESSAGE("Flash encryption is enabled, skip this test");
     }
 
@@ -756,3 +849,52 @@ TEST_CASE("GDMA memory copy SRAM->PSRAM->SRAM", "[GDMA][M2M]")
 #endif // SOC_HAS(LP_AHB_GDMA)
 }
 #endif // SOC_SPIRAM_SUPPORTED
+
+static bool test_gdma_intr_priority_tx_callback(gdma_channel_handle_t dma_chan, gdma_event_data_t *event_data, void *user_data)
+{
+    return false;
+}
+
+static bool test_gdma_intr_priority_rx_callback(gdma_channel_handle_t dma_chan, gdma_event_data_t *event_data, void *user_data)
+{
+    return false;
+}
+
+TEST_CASE("GDMA interrupt priority configuration", "[GDMA]")
+{
+    // test both TX and RX channel with the same interrupt priority
+    gdma_channel_handle_t tx_chan = NULL;
+    gdma_channel_handle_t rx_chan = NULL;
+    gdma_channel_alloc_config_t chan_alloc_config = {
+        .intr_priority = 2,
+    };
+
+    TEST_ESP_OK(gdma_new_ahb_channel(&chan_alloc_config, &tx_chan, &rx_chan));
+
+    gdma_tx_event_callbacks_t tx_cbs = {
+        .on_trans_eof = test_gdma_intr_priority_tx_callback,
+    };
+    gdma_rx_event_callbacks_t rx_cbs = {
+        .on_recv_eof = test_gdma_intr_priority_rx_callback,
+    };
+    TEST_ESP_OK(gdma_register_tx_event_callbacks(tx_chan, &tx_cbs, NULL));
+    TEST_ESP_OK(gdma_register_rx_event_callbacks(rx_chan, &rx_cbs, NULL));
+    TEST_ESP_OK(gdma_del_channel(tx_chan));
+    TEST_ESP_OK(gdma_del_channel(rx_chan));
+
+    // test TX and RX channel with different interrupt priority
+    TEST_ESP_OK(gdma_new_ahb_channel(&chan_alloc_config, &tx_chan, NULL));
+    TEST_ESP_OK(gdma_register_tx_event_callbacks(tx_chan, &tx_cbs, NULL));
+    chan_alloc_config.intr_priority = 3;
+    TEST_ESP_OK(gdma_new_ahb_channel(&chan_alloc_config, NULL, &rx_chan));
+#if CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C3
+    // On such targets, the TX and RX DMA interrupts are sharing the same interrupt source,
+    // so it's not allowed to set different interrupt priority for TX and RX channel
+    TEST_ESP_ERR(ESP_ERR_INVALID_ARG, gdma_register_rx_event_callbacks(rx_chan, &rx_cbs, NULL));
+#else
+    // on other targets, the TX and RX DMA interrupts are separate, it's allowed to set different interrupt priority for TX and RX channel
+    TEST_ESP_OK(gdma_register_rx_event_callbacks(rx_chan, &rx_cbs, NULL));
+#endif
+    TEST_ESP_OK(gdma_del_channel(tx_chan));
+    TEST_ESP_OK(gdma_del_channel(rx_chan));
+}

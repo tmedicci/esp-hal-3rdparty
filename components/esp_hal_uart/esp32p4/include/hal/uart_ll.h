@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -33,6 +33,14 @@
     (num) == 2 ? (&UART2) : \
     (num) == 3 ? (&UART3) : \
     (num) == 4 ? (&UART4) : (&LP_UART))
+// Get UART sleep clock with giving uart num
+#define UART_LL_SLEEP_CLOCK(num) \
+    ( ((num) == UART_NUM_0) ? (ESP_SLEEP_CLOCK_UART0) \
+    : ((num) == UART_NUM_1) ? (ESP_SLEEP_CLOCK_UART1) \
+    : ((num) == UART_NUM_2) ? (ESP_SLEEP_CLOCK_UART2) \
+    : ((num) == UART_NUM_3) ? (ESP_SLEEP_CLOCK_UART3) \
+    : ((num) == UART_NUM_4) ? (ESP_SLEEP_CLOCK_UART4) \
+    : (ESP_SLEEP_CLOCK_MAX))
 
 #define UART_LL_REG_FIELD_BIT_SHIFT(hw)     (((hw) == &LP_UART) ? 3 : 0)
 
@@ -74,6 +82,10 @@ typedef enum {
     UART_INTR_CMD_CHAR_DET     = (0x1 << 18),
     UART_INTR_WAKEUP           = (0x1 << 19),
 } uart_intr_t;
+
+typedef enum {
+    UART_LL_MEM_LP_MODE_SHUT_DOWN, /*!< mem_force_pd/pu only; no mem_lp_mode stage config */
+} uart_ll_mem_lp_mode_t;
 
 /**
  * @brief Sync the update to UART core clock domain
@@ -231,6 +243,42 @@ static inline void lp_uart_ll_reset_register(int hw_id)
         (void)__DECLARE_RCC_ATOMIC_ENV; \
         lp_uart_ll_reset_register(__VA_ARGS__); \
     } while(0)
+
+/**
+ * @brief  Force LP UART memory block powered on by software.
+ */
+FORCE_INLINE_ATTR void lp_uart_ll_mem_force_power_on(void)
+{
+    LP_UART.mem_conf.mem_force_pd = 0;
+    LP_UART.mem_conf.mem_force_pu = 1;
+}
+
+/**
+ * @brief  Force LP UART memory block in low power by software.
+ */
+FORCE_INLINE_ATTR void lp_uart_ll_mem_force_low_power(void)
+{
+    LP_UART.mem_conf.mem_force_pu = 0;
+    LP_UART.mem_conf.mem_force_pd = 1;
+}
+
+/**
+ * @brief  Control LP UART memory block by PMU logic.
+ */
+FORCE_INLINE_ATTR void lp_uart_ll_mem_power_by_pmu(void)
+{
+    LP_UART.mem_conf.mem_force_pd = 0;
+    LP_UART.mem_conf.mem_force_pu = 0;
+}
+
+/**
+ * @brief  Set LP UART memory low power mode in low power stage (no mem_lp_mode field; assert shut-down mode only).
+ */
+FORCE_INLINE_ATTR void lp_uart_ll_mem_set_low_power_mode(uart_ll_mem_lp_mode_t mode)
+{
+    HAL_ASSERT(mode == UART_LL_MEM_LP_MODE_SHUT_DOWN);
+    (void)mode;
+}
 
 /*************************************** General LL functions ******************************************/
 
@@ -518,6 +566,66 @@ FORCE_INLINE_ATTR void uart_ll_get_sclk(uart_dev_t *hw, soc_module_clk_t *source
     } else {
         lp_uart_ll_get_sclk(hw, source_clk);
     }
+}
+
+/**
+ * @brief  Force UART memory block powered on by software.
+ *
+ * @param  uart_num UART port number for HP UART.
+ */
+FORCE_INLINE_ATTR void uart_ll_mem_force_power_on(uart_port_t uart_num)
+{
+    uart_dev_t *hw = UART_LL_GET_HW(uart_num);
+    if (uart_num != LP_UART_NUM_0) {
+        hw->mem_conf.mem_force_pd = 0;
+        hw->mem_conf.mem_force_pu = 1;
+    } else {
+        lp_uart_ll_mem_force_power_on();
+    }
+}
+
+/**
+ * @brief  Force UART memory block in low power by software.
+ *
+ * @param  uart_num UART port number for HP UART.
+ */
+FORCE_INLINE_ATTR void uart_ll_mem_force_low_power(uart_port_t uart_num)
+{
+    uart_dev_t *hw = UART_LL_GET_HW(uart_num);
+    if (uart_num != LP_UART_NUM_0) {
+        hw->mem_conf.mem_force_pu = 0;
+        hw->mem_conf.mem_force_pd = 1;
+    } else {
+        lp_uart_ll_mem_force_low_power();
+    }
+}
+
+/**
+ * @brief  Control UART memory block by PMU logic.
+ *
+ * @param  uart_num UART port number for HP UART.
+ */
+FORCE_INLINE_ATTR void uart_ll_mem_power_by_pmu(uart_port_t uart_num)
+{
+    uart_dev_t *hw = UART_LL_GET_HW(uart_num);
+    if (uart_num != LP_UART_NUM_0) {
+        hw->mem_conf.mem_force_pd = 0;
+        hw->mem_conf.mem_force_pu = 0;
+    } else {
+        lp_uart_ll_mem_power_by_pmu();
+    }
+}
+
+/**
+ * @brief  Set UART memory low power mode in low power stage (no mem_lp_mode on ESP32-P4; no-op).
+ *
+ * @param  uart_num UART port number for HP UART.
+ * @param  mode UART memory low power mode.
+ */
+FORCE_INLINE_ATTR void uart_ll_mem_set_low_power_mode(uart_port_t uart_num, uart_ll_mem_lp_mode_t mode)
+{
+    HAL_ASSERT(mode == UART_LL_MEM_LP_MODE_SHUT_DOWN);
+    (void)uart_num;
 }
 
 /**
@@ -1104,8 +1212,10 @@ FORCE_INLINE_ATTR void uart_ll_set_dtr_active_level(uart_dev_t *hw, int level)
  */
 FORCE_INLINE_ATTR void uart_ll_set_wakeup_edge_thrd(uart_dev_t *hw, uint32_t wakeup_thrd)
 {
-    // System would wakeup when the number of positive edges of RxD signal is larger than or equal to (UART_ACTIVE_THRESHOLD+3)
-    hw->sleep_conf2.active_threshold = wakeup_thrd - UART_LL_WAKEUP_EDGE_THRED_MIN;
+    // System would wakeup when the number of positive edges of RxD signal is larger than or equal to (UART_ACTIVE_THRESHOLD+offset)
+    // HP UART: offset is 6, LP UART: offset is 3
+    uint32_t offset = (hw == &LP_UART) ? UART_LL_WAKEUP_EDGE_THRED_MIN : UART_LL_WAKEUP_EDGE_THRED_MIN + 3;
+    hw->sleep_conf2.active_threshold = wakeup_thrd - offset;
 }
 
 /**
@@ -1413,7 +1523,9 @@ FORCE_INLINE_ATTR void uart_ll_get_at_cmd_char(uart_dev_t *hw, uint8_t *cmd_char
  */
 FORCE_INLINE_ATTR uint32_t uart_ll_get_wakeup_edge_thrd(uart_dev_t *hw)
 {
-    return hw->sleep_conf2.active_threshold + UART_LL_WAKEUP_EDGE_THRED_MIN;
+    // HP UART: offset is 6, LP UART: offset is 3
+    uint32_t offset = (hw == &LP_UART) ? UART_LL_WAKEUP_EDGE_THRED_MIN : UART_LL_WAKEUP_EDGE_THRED_MIN + 3;
+    return hw->sleep_conf2.active_threshold + offset;
 }
 
 /**

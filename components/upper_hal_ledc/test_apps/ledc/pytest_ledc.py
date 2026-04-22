@@ -37,7 +37,7 @@ def test_ledc_esp32c5(dut: IdfDut) -> None:
 
 
 @pytest.mark.generic
-@pytest.mark.esp32c5_eco3
+@pytest.mark.esp32c5_rev1
 @pytest.mark.parametrize(
     'config',
     [
@@ -46,7 +46,7 @@ def test_ledc_esp32c5(dut: IdfDut) -> None:
     indirect=True,
 )
 @idf_parametrize('target', ['esp32c5'], indirect=['target'])
-def test_ledc_esp32c5_eco3(dut: IdfDut) -> None:
+def test_ledc_esp32c5_rev1(dut: IdfDut) -> None:
     dut.run_all_single_board_cases(reset=True)
 
 
@@ -75,5 +75,6 @@ def test_ledc_psram(dut: IdfDut) -> None:
     indirect=True,
 )
 @idf_parametrize('target', ['supported_targets'], indirect=['target'])
+@pytest.mark.temp_skip_ci(targets=['esp32s31'], reason='TODO: IDFCI-10334 no runner yet')
 def test_ledc_multi_device(case_tester) -> None:  # type: ignore
     case_tester.run_all_multi_dev_cases(reset=True)
