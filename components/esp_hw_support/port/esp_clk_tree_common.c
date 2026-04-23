@@ -6,7 +6,7 @@
 
 #include <assert.h>
 #include <stdbool.h>
-#include <freertos/FreeRTOS.h>
+#include "platform/os.h"
 #include "esp_private/esp_clk_tree_common.h"
 #include "esp_private/critical_section.h"
 #include "hal/clk_tree_hal.h"
@@ -214,7 +214,7 @@ uint32_t esp_clk_tree_lp_fast_get_freq_hz(esp_clk_tree_src_freq_precision_t prec
 
 #if SOC_CLK_APLL_SUPPORTED
 // Current APLL frequency, in HZ. Zero if APLL is not enabled.
-static portMUX_TYPE __attribute__((unused)) s_periph_apll_spinlock = portMUX_INITIALIZER_UNLOCKED;
+DEFINE_CRIT_SECTION_LOCK_STATIC(s_periph_apll_spinlock, __attribute__(unused));
 static uint32_t s_cur_apll_freq_hz = 0;
 static int s_apll_ref_cnt = 0;
 
@@ -311,7 +311,7 @@ esp_err_t esp_clk_tree_apll_freq_set(uint32_t expt_freq_hz, uint32_t *real_freq_
 #endif /* SOC_CLK_APLL_SUPPORTED */
 
 #if SOC_CLK_MPLL_SUPPORTED
-static portMUX_TYPE __attribute__((unused)) s_periph_mpll_spinlock = portMUX_INITIALIZER_UNLOCKED;
+DEFINE_CRIT_SECTION_LOCK_STATIC(s_periph_mpll_spinlock, __attribute__((unused)));
 static uint32_t s_cur_mpll_freq_hz = 0;
 static int s_mpll_ref_cnt = 0;
 #if CONFIG_ESP_LDO_RESERVE_PSRAM

@@ -70,6 +70,7 @@
 #define OS_PASS                     TRUE
 #define traceISR_ENTER(param1)
 #define traceISR_EXIT(param1)
+#define xPortFPUContextIsDirty(core_id) (false)
 #define os_task_switch_is_pended(_cpu_) (false)
 #define OS_PORT_NUM_PROCESSORS      CONFIG_FREERTOS_NUMBER_OF_CORES
 #define OS_PORT_GET_CORE_ID()       this_cpu()
@@ -218,6 +219,9 @@ esp_err_t esp_os_intr_free(intr_handle_t handle);
 esp_err_t esp_os_intr_alloc(int source, int flags,
                              esp_os_intr_handler_t handler, FAR void *arg,
                              FAR intr_handle_t *ret_handle);
+
+esp_err_t esp_os_intr_alloc_info(const esp_intr_alloc_info_t *info,
+                                 FAR intr_handle_t *ret_handle);
 
 esp_err_t esp_os_intr_alloc_intrstatus(int source, int flags,
                                         uint32_t intrstatusreg,

@@ -334,32 +334,6 @@ static esp_err_t esp_os_queue_receive_generic(esp_os_queue_handle_t queue,
 }
 
 /****************************************************************************
- * Name: isr_adapter_func
- *
- * Description:
- *   Interrupt service routine adapter function.
- *
- * Input Parameters:
- *   irq     - IRQ number.
- *   context - Context (unused).
- *   arg     - User argument.
- *
- * Returned Value:
- *   Zero (OK).
- *
- ****************************************************************************/
-
-static int isr_adapter_func(int irq, FAR void *context, FAR void *arg)
-{
-  FAR struct intr_adapter_to_nuttx *isr_adapter_args =
-    (FAR struct intr_adapter_to_nuttx *)arg;
-
-  isr_adapter_args->handler(isr_adapter_args->arg);
-
-  return 0;
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -385,6 +359,55 @@ esp_err_t esp_os_intr_free(intr_handle_t handle)
   int cpuint = esp_get_cpuint(this_cpu(), irq);
 
   esp_teardown_irq(ESP_IRQ2SOURCE(irq), cpuint);
+
+  return ESP_OK;
+}
+
+/****************************************************************************
+ * Name: esp_os_intr_alloc_info
+ *
+ * Description:
+ *   Allocate an interrupt handler from a parameter structure.
+ *
+ * Input Parameters:
+ *   info       - Pointer to the interrupt allocation information.
+ *   ret_handle - Pointer to receive the interrupt handle (optional).
+ *
+ * Returned Value:
+ *   ESP_OK on success; error code on failure.
+ *
+ ****************************************************************************/
+
+esp_err_t esp_os_intr_alloc_info(const esp_intr_alloc_info_t *info,
+                                 FAR intr_handle_t *ret_handle)
+{
+  esp_intr_alloc_info_t alloc_info;
+  esp_err_t ret;
+  int source;
+  int irq;
+
+  if (info == NULL || ret_handle == NULL)
+    {
+      return ESP_ERR_INVALID_ARG;
+    }
+
+  source = info->source;
+  irq = ESP_SOURCE2IRQ(source);
+
+  ret = esp_intr_alloc_info(info, ret_handle);
+  if (ret != ESP_OK)
+    {
+      irqerr("Failed to setup interrupt, ret=%d\n", (int)ret);
+      return ret;
+    }
+
+  if (*ret_handle == NULL)
+    {
+      irqerr("Failed to get handle\n");
+      return ESP_ERR_NOT_FOUND;
+    }
+
+  up_enable_irq(irq);
 
   return ESP_OK;
 }
@@ -442,43 +465,18 @@ esp_err_t esp_os_intr_alloc_intrstatus(int source, int flags,
                                         FAR void *arg,
                                         FAR intr_handle_t *ret_handle)
 {
-  FAR struct intr_adapter_to_nuttx *isr_adapter_args;
-  int ret;
-  int irq = ESP_SOURCE2IRQ(source);
-  int cpuint;
-
-  isr_adapter_args = kmm_calloc(1, sizeof(struct intr_adapter_to_nuttx));
-  if (isr_adapter_args == NULL)
+  esp_intr_alloc_info_t info =
     {
-      irqerr("Failed to kmm_calloc\n");
-      return ESP_ERR_NO_MEM;
-    }
+      .source = source,
+      .flags = flags,
+      .intrstatusreg = intrstatusreg,
+      .intrstatusmask = intrstatusmask,
+      .handler = handler,
+      .arg = arg,
+      .bind_by.handle = NULL,
+    };
 
-  isr_adapter_args->handler = handler;
-  isr_adapter_args->arg     = arg;
-
-  cpuint = esp_setup_irq_with_flags_intrstatus(source, flags, intrstatusreg,
-                                               intrstatusmask,
-                                               isr_adapter_func,
-                                               isr_adapter_args);
-
-  if (cpuint < 0)
-    {
-      irqerr("Failed to setup interrupt\n");
-      return ESP_ERR_NOT_FOUND;
-    }
-
-  *ret_handle = esp_get_handle(this_cpu(), irq);
-
-  if (*ret_handle == NULL)
-    {
-      irqerr("Failed to get handle\n");
-      return ESP_ERR_NOT_FOUND;
-    }
-
-  up_enable_irq(irq);
-
-  return ESP_OK;
+  return esp_os_intr_alloc_info(&info, ret_handle);
 }
 
 /****************************************************************************

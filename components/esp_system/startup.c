@@ -234,6 +234,7 @@ static void start_cpu0_default(void)
     esp_startup_start_app();
 
     ESP_INFINITE_LOOP();
+#endif
 }
 
 #if CONFIG_IDF_TARGET_LINUX && !defined(ESP_SYSTEM_LINUX_NO_MAIN)
