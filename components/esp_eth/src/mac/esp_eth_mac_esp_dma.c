@@ -483,13 +483,19 @@ void emac_esp_dma_flush_recv_frame(emac_esp_dma_handle_t emac_esp_dma)
 esp_err_t emac_esp_del_dma(emac_esp_dma_handle_t emac_esp_dma)
 {
     if (emac_esp_dma) {
+        /* Descriptors and RX/TX DMA buffers were allocated via
+         * heap_caps_aligned_calloc() which maps to the NuttX kernel heap
+         * (via kmm_memalign).  Free them through heap_caps_free() to
+         * avoid a cross-heap free that would trip mm_heapmember().
+         */
         for (int i = 0; i < CONFIG_ETH_DMA_TX_BUFFER_NUM; i++) {
-            free(emac_esp_dma->tx_buf[i]);
+            heap_caps_free(emac_esp_dma->tx_buf[i]);
         }
         for (int i = 0; i < CONFIG_ETH_DMA_RX_BUFFER_NUM; i++) {
-            free(emac_esp_dma->rx_buf[i]);
+            heap_caps_free(emac_esp_dma->rx_buf[i]);
         }
-        free(emac_esp_dma->descriptors);
+        heap_caps_free(emac_esp_dma->descriptors);
+        /* emac_esp_dma was allocated with calloc() (user heap) */
         free(emac_esp_dma);
     }
     return ESP_OK;
