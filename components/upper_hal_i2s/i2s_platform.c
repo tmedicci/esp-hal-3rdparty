@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include "platform/os.h"
+#include "esp_private/critical_section.h"
+
 #include "esp_check.h"
 #include "i2s_private.h"
 #include "esp_private/i2s_platform.h"
@@ -15,7 +18,7 @@ static const char *TAG = "i2s_platform";
  * @note  For saving all the I2S related information
  */
 i2s_platform_t g_i2s = {
-    .spinlock = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED,
+    INIT_CRIT_SECTION_LOCK_IN_STRUCT(spinlock)
     .controller[0 ...(I2S_LL_GET(INST_NUM) - 1)] = NULL,  // groups will be lazy installed
     .comp_name[0 ...(I2S_LL_GET(INST_NUM) - 1)] = NULL,
 #if SOC_LP_I2S_SUPPORTED
@@ -37,7 +40,7 @@ esp_err_t i2s_platform_acquire_occupation(i2s_ctlr_t type, int id, const char *c
     ESP_RETURN_ON_FALSE(id < I2S_LL_GET(INST_NUM), ESP_ERR_INVALID_ARG, TAG, "invalid i2s port id");
 
     if (type == I2S_CTLR_HP) {
-        portENTER_CRITICAL(&g_i2s.spinlock);
+        esp_os_enter_critical(&g_i2s.spinlock);
         if ((!g_i2s.controller[id]) && (g_i2s.comp_name[id] == NULL)) {
             g_i2s.comp_name[id] = comp_name;
             /* Enable module clock */
@@ -50,11 +53,11 @@ esp_err_t i2s_platform_acquire_occupation(i2s_ctlr_t type, int id, const char *c
             occupied_comp =  g_i2s.comp_name[id];
             ret = ESP_ERR_NOT_FOUND;
         }
-        portEXIT_CRITICAL(&g_i2s.spinlock);
+        esp_os_exit_critical(&g_i2s.spinlock);
     }
 #if SOC_LP_I2S_SUPPORTED
     else {
-        portENTER_CRITICAL(&g_i2s.spinlock);
+        esp_os_enter_critical(&g_i2s.spinlock);
         if ((!g_i2s.lp_controller[id]) && (g_i2s.lp_comp_name[id] == NULL)) {
             g_i2s.lp_comp_name[id] = comp_name;
             /* Enable module clock */
@@ -67,7 +70,7 @@ esp_err_t i2s_platform_acquire_occupation(i2s_ctlr_t type, int id, const char *c
             occupied_comp =  g_i2s.lp_comp_name[id];
             ret = ESP_ERR_NOT_FOUND;
         }
-        portEXIT_CRITICAL(&g_i2s.spinlock);
+        esp_os_exit_critical(&g_i2s.spinlock);
     }
 #endif
     if (occupied_comp != NULL) {
@@ -82,7 +85,7 @@ esp_err_t i2s_platform_release_occupation(i2s_ctlr_t type, int id)
     ESP_RETURN_ON_FALSE(id < I2S_LL_GET(INST_NUM), ESP_ERR_INVALID_ARG, TAG, "invalid i2s port id");
 
     if (type == I2S_CTLR_HP) {
-        portENTER_CRITICAL(&g_i2s.spinlock);
+        esp_os_enter_critical(&g_i2s.spinlock);
         if (!g_i2s.controller[id]) {
             g_i2s.comp_name[id] = NULL;
             /* Disable module clock */
@@ -93,11 +96,11 @@ esp_err_t i2s_platform_release_occupation(i2s_ctlr_t type, int id)
         } else {
             ret = ESP_ERR_INVALID_STATE;
         }
-        portEXIT_CRITICAL(&g_i2s.spinlock);
+        esp_os_exit_critical(&g_i2s.spinlock);
     }
 #if SOC_LP_I2S_SUPPORTED
     else {
-        portENTER_CRITICAL(&g_i2s.spinlock);
+        esp_os_enter_critical(&g_i2s.spinlock);
         if (!g_i2s.lp_controller[id]) {
             g_i2s.lp_comp_name[id] = NULL;
             /* Disable module clock */
@@ -108,7 +111,7 @@ esp_err_t i2s_platform_release_occupation(i2s_ctlr_t type, int id)
         } else {
             ret = ESP_ERR_INVALID_STATE;
         }
-        portEXIT_CRITICAL(&g_i2s.spinlock);
+        esp_os_exit_critical(&g_i2s.spinlock);
     }
 #endif
     return ret;

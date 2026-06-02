@@ -253,6 +253,14 @@ void esp_os_queue_delete_with_caps(esp_os_queue_handle_t queue);
 
 void esp_os_queue_delete(esp_os_queue_handle_t queue);
 
+void esp_os_queue_reset(esp_os_queue_handle_t queue);
+
+uint32_t esp_os_queue_messages_waiting(esp_os_queue_handle_t queue);
+
+uint32_t esp_os_queue_spaces_available(esp_os_queue_handle_t queue);
+
+bool esp_os_queue_is_full_from_isr(esp_os_queue_handle_t queue);
+
 /* Recursive mutex functions */
 
 void esp_os_create_recursive_mutex(FAR esp_os_recursive_mutex_t *mutex);
@@ -279,11 +287,19 @@ void esp_os_delete_mutex(FAR esp_os_mutex_t *mutex);
 
 void esp_os_create_sem(FAR esp_os_sem_t *sem);
 
+void esp_os_create_bin_sem(FAR esp_os_sem_t *sem);
+
 int esp_os_wait_sem_timeout(FAR esp_os_sem_t *sem, uint32_t timeout_ticks);
+
+int esp_os_take_sem_timeout(FAR esp_os_sem_t *sem, uint32_t timeout_ticks);
+
+int esp_os_give_sem(FAR esp_os_sem_t *sem);
 
 int esp_os_post_sem_isr(FAR esp_os_sem_t *sem, long int *task_awoken);
 
 void esp_os_destroy_sem(FAR esp_os_sem_t *sem);
+
+void esp_os_delete_sem(FAR esp_os_sem_t *sem);
 
 /* Scheduler control functions */
 

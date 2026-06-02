@@ -704,6 +704,146 @@ void esp_os_queue_delete(esp_os_queue_handle_t queue)
 }
 
 /****************************************************************************
+ * Name: esp_os_queue_reset
+ *
+ * Description:
+ *   Discard all elements waitin on a queue.
+ *
+ * Input Parameters:
+ *   queue - Queue handle.
+ *
+ ****************************************************************************/
+
+void esp_os_queue_reset(esp_os_queue_handle_t queue)
+{
+  struct mq_attr attr;
+  char *item;
+  int flags;
+
+  if (file_mq_getattr(&queue->mq, &attr))
+    {
+      _err("Failed to get queue attributes\n");
+      return;
+    }
+
+  item = kmm_malloc(attr.mq_msgsize);
+  if (item == NULL)
+    {
+      _err("Failed to alloc item buffer\n");
+      return;
+    }
+
+  flags = file_fcntl(&queue->mq, F_GETFL);
+  if ((flags & O_NONBLOCK) == 0)
+    {
+      if (file_fcntl(&queue->mq, F_SETFL, flags | O_NONBLOCK) == -1)
+        {
+          _err("Failed to set nonblock flag\n");
+          kmm_free(item);
+          return;
+        }
+    }
+
+  /* Empty the queue */
+
+  while (esp_os_queue_receive_generic(queue, item, 0) == ESP_OK);
+
+  if ((flags & O_NONBLOCK) == 0)
+    {
+
+  /* Restore the original flags. */
+
+      if (file_fcntl(&queue->mq, F_SETFL, flags) == -1)
+        {
+          _err("Failed to clear nonblock flag\n");
+        }
+    }
+
+  kmm_free(item);
+}
+
+/****************************************************************************
+ * Name: esp_os_queue_messages_waiting
+ *
+ * Description:
+ *   Return the number of messages waiting in a queue.
+ *
+ * Input Parameters:
+ *   queue - Queue handle.
+ *
+ * Returned Value:
+ *   The number of messages waiting in a queue.
+ *
+ ****************************************************************************/
+
+uint32_t esp_os_queue_messages_waiting(esp_os_queue_handle_t queue)
+{
+  struct mq_attr attr;
+
+  if (file_mq_getattr(&queue->mq, &attr))
+    {
+      _err("Failed to get queue attributes\n");
+      return 0;
+    }
+
+  return (uint32_t)attr.mq_curmsgs;
+}
+
+/****************************************************************************
+ * Name: esp_os_queue_spaces_available
+ *
+ * Description:
+ *   Return the number of spaces available in a queue.
+ *
+ * Input Parameters:
+ *   queue - Queue handle.
+ *
+ * Returned Value:
+ *   The number of spaces available in a queue.
+ *
+ ****************************************************************************/
+
+uint32_t esp_os_queue_spaces_available(esp_os_queue_handle_t queue)
+{
+  struct mq_attr attr;
+
+  if (file_mq_getattr(&queue->mq, &attr))
+    {
+      _err("Failed to get queue attributes\n");
+      return 0;
+    }
+
+  return (uint32_t)(attr.mq_maxmsg - attr.mq_curmsgs);
+}
+
+/****************************************************************************
+ * Name: esp_os_queue_is_full_from_isr
+ *
+ * Description:
+ *   Test whether a queue is full (ISR-safe snapshot).
+ *
+ * Input Parameters:
+ *   queue - Queue handle.
+ *
+ * Returned Value:
+ *   True if the queue has no free slots (mq_curmsgs == mq_maxmsg).
+ *
+ ****************************************************************************/
+
+bool esp_os_queue_is_full_from_isr(esp_os_queue_handle_t queue)
+{
+  struct mq_attr attr;
+
+  if (file_mq_getattr(&queue->mq, &attr))
+    {
+      _err("Failed to get queue attributes\n");
+      return true;
+    }
+
+  return (attr.mq_curmsgs == attr.mq_maxmsg);
+}
+
+/****************************************************************************
  * Name: esp_os_include_impl
  *
  * Description:
@@ -897,6 +1037,22 @@ void esp_os_create_sem(FAR esp_os_sem_t *sem)
 }
 
 /****************************************************************************
+ * Name: esp_os_create_bin_sem
+ *
+ * Description:
+ *   Initialize a non-recursive binary semaphore with initial value 0.
+ *
+ * Input Parameters:
+ *   sem - Pointer to the binary semaphore to initialize.
+ *
+ ****************************************************************************/
+
+void esp_os_create_bin_sem(FAR esp_os_sem_t *sem)
+{
+  esp_os_create_sem(sem);
+}
+
+/****************************************************************************
  * Name: esp_os_drain_sem
  *
  * Description:
@@ -949,6 +1105,62 @@ int esp_os_wait_sem_timeout(FAR esp_os_sem_t *sem, uint32_t timeout_ticks)
 }
 
 /****************************************************************************
+ * Name: esp_os_take_sem_timeout
+ *
+ * Description:
+ *   Take a semaphore, blocking up to timeout_ticks.
+ *   timeout_ticks of UINT32_MAX waits forever; zero performs a non-blocking
+ *   take.
+ *
+ * Input Parameters:
+ *   sem           - Pointer to the semaphore.
+ *   timeout_ticks - Timeout for wait, in system ticks.
+ *
+ * Returned Value:
+ *   0 on success, or a negated errno value on failure.
+ *
+ ****************************************************************************/
+
+int esp_os_take_sem_timeout(FAR esp_os_sem_t *sem, uint32_t timeout_ticks)
+{
+  int ret;
+
+  if (timeout_ticks == 0)
+    {
+      ret = nxsem_trywait(sem);
+    }
+  else if (timeout_ticks == UINT32_MAX)
+    {
+      ret = nxsem_wait(sem);
+    }
+  else
+    {
+      ret = nxsem_tickwait(sem, timeout_ticks);
+    }
+
+  return ret == OK ? 0 : ret;
+}
+
+/****************************************************************************
+ * Name: esp_os_give_sem
+ *
+ * Description:
+ *   Give (post) a semaphore.
+ *
+ * Input Parameters:
+ *   sem - Pointer to the semaphore.
+ *
+ * Returned Value:
+ *   0 on success, or a negated errno value on failure.
+ *
+ ****************************************************************************/
+
+int esp_os_give_sem(FAR esp_os_sem_t *sem)
+{
+  return nxsem_post(sem);
+}
+
+/****************************************************************************
  * Name: esp_os_post_sem_isr
  *
  * Description:
@@ -982,6 +1194,22 @@ int esp_os_post_sem_isr(FAR esp_os_sem_t *sem, long int *task_awoken)
  ****************************************************************************/
 
 void esp_os_destroy_sem(FAR esp_os_sem_t *sem)
+{
+  nxsem_destroy(sem);
+}
+
+/****************************************************************************
+ * Name: esp_os_delete_sem
+ *
+ * Description:
+ *   Delete a semaphore initialized with esp_os_create_sem().
+ *
+ * Input Parameters:
+ *   sem - Pointer to the semaphore.
+ *
+ ****************************************************************************/
+
+void esp_os_delete_sem(FAR esp_os_sem_t *sem)
 {
   nxsem_destroy(sem);
 }

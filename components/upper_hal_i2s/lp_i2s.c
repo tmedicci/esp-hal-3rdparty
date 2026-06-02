@@ -5,18 +5,17 @@
  */
 
 #include <esp_types.h>
-#include <sys/lock.h>
 #include "sdkconfig.h"
 #if CONFIG_I2S_ENABLE_DEBUG_LOG
 // The local log level must be defined before including esp_log.h
 // Set the maximum log level for this source file
 #define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
 #endif
+#include "platform/os.h"
+#include "esp_private/critical_section.h"
 #include "esp_log.h"
 #include "esp_check.h"
 #include "esp_heap_caps.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
 #include "esp_clk_tree.h"
 #include "esp_memory_utils.h"
 #include "hal/hal_utils.h"
@@ -72,9 +71,9 @@ esp_err_t lp_i2s_new_channel(const lp_i2s_chan_config_t *chan_cfg, lp_i2s_chan_h
     chan_search_mask |= ret_rx_handle ? I2S_DIR_RX : 0;
 #endif
 
-    portENTER_CRITICAL(&g_i2s.spinlock);
+    esp_os_enter_critical(&g_i2s.spinlock);
     g_i2s.lp_controller[chan_cfg->id] = ctlr;
-    portEXIT_CRITICAL(&g_i2s.spinlock);
+    esp_os_exit_critical(&g_i2s.spinlock);
 
     bool channel_found = s_lp_i2s_take_available_channel(ctlr, chan_search_mask);
     ESP_GOTO_ON_FALSE(channel_found, ESP_ERR_NOT_FOUND, err1, TAG, "no available channel found");
@@ -86,8 +85,7 @@ esp_err_t lp_i2s_new_channel(const lp_i2s_chan_config_t *chan_cfg, lp_i2s_chan_h
         *ret_rx_handle = ctlr->rx_chan;
         ESP_LOGD(TAG, "rx channel is registered on LP_I2S%d successfully", ctlr->id);
 
-        ctlr->rx_chan->semphr = xSemaphoreCreateBinaryWithCaps(LP_I2S_MEM_ALLOC_CAPS);
-        ESP_GOTO_ON_FALSE(ctlr->rx_chan->semphr, ESP_ERR_NO_MEM, err0, TAG, "No memory for binary semaphore");
+        esp_os_create_bin_sem(&ctlr->rx_chan->semphr);
     }
 
     PERIPH_RCC_ATOMIC() {
@@ -115,11 +113,6 @@ esp_err_t lp_i2s_new_channel(const lp_i2s_chan_config_t *chan_cfg, lp_i2s_chan_h
 
     return ESP_OK;
 
-err0:
-    vSemaphoreDeleteWithCaps(ctlr->rx_chan->semphr);
-    free(ctlr->rx_chan);
-    ctlr->rx_chan = NULL;
-
 err1:
     /* if the controller object has no channel, find the corresponding global object and destroy it */
     if (ctlr != NULL && ctlr->rx_chan == NULL) {
@@ -144,10 +137,10 @@ esp_err_t lp_i2s_channel_enable(lp_i2s_chan_handle_t chan)
         chan->trans = evt_data.trans;
     }
 
-    portENTER_CRITICAL(&g_i2s.spinlock);
+    esp_os_enter_critical(&g_i2s.spinlock);
     lp_i2s_ll_rx_enable_interrupt(chan->ctlr->hal.dev, LP_I2S_LL_EVENT_RX_MEM_THRESHOLD_INT, true);
     lp_i2s_ll_rx_start(chan->ctlr->hal.dev);
-    portEXIT_CRITICAL(&g_i2s.spinlock);
+    esp_os_exit_critical(&g_i2s.spinlock);
 
     return ESP_OK;
 }
@@ -158,13 +151,12 @@ esp_err_t lp_i2s_channel_read(lp_i2s_chan_handle_t chan, lp_i2s_trans_t *trans, 
     ESP_RETURN_ON_FALSE(atomic_load(&(chan->state)) == I2S_CHAN_STATE_RUNNING, ESP_ERR_INVALID_STATE, TAG, "the channel can't be deleted unless it is disabled");
     ESP_RETURN_ON_FALSE(!chan->cbs.on_request_new_trans, ESP_ERR_INVALID_STATE, TAG, "on_request_new_trans registered, no use of this read API");
 
-    TickType_t ticks_to_wait = timeout_ms / portTICK_PERIOD_MS;
+    esp_os_tick_type_t ticks_to_wait = timeout_ms / OS_TICK_PERIOD_MS;
     if (timeout_ms == LP_I2S_MAX_DELAY) {
-        ticks_to_wait = portMAX_DELAY;
+        ticks_to_wait = OS_PORT_MAX_DELAY;
     }
 
-    BaseType_t r = xSemaphoreTake(chan->semphr, ticks_to_wait);
-    if (r != pdTRUE) {
+    if (esp_os_take_sem_timeout(&chan->semphr, ticks_to_wait) != 0) {
         ESP_LOGW(TAG, "lp_i2s read API, new data receiving timeout");
         return ESP_ERR_TIMEOUT;
     }
@@ -173,10 +165,10 @@ esp_err_t lp_i2s_channel_read(lp_i2s_chan_handle_t chan, lp_i2s_trans_t *trans, 
     size_t len = MIN(fifo_cnt, trans->buflen);
     lp_i2s_ll_read_buffer(chan->ctlr->hal.dev, trans->buffer, len);
     trans->received_size = len;
-    portENTER_CRITICAL(&g_i2s.spinlock);
+    esp_os_enter_critical(&g_i2s.spinlock);
     lp_i2s_ll_rx_clear_interrupt_status(chan->ctlr->hal.dev, LP_I2S_LL_EVENT_RX_MEM_THRESHOLD_INT);
     lp_i2s_ll_rx_enable_interrupt(chan->ctlr->hal.dev, LP_I2S_LL_EVENT_RX_MEM_THRESHOLD_INT, true);
-    portEXIT_CRITICAL(&g_i2s.spinlock);
+    esp_os_exit_critical(&g_i2s.spinlock);
 
     return ESP_OK;
 }
@@ -208,10 +200,10 @@ esp_err_t lp_i2s_channel_disable(lp_i2s_chan_handle_t chan)
     i2s_state_t expected_state = I2S_CHAN_STATE_RUNNING;
     ESP_RETURN_ON_FALSE(atomic_compare_exchange_strong(&(chan->state), &expected_state, I2S_CHAN_STATE_READY), ESP_ERR_INVALID_STATE, TAG, "the channel isn't enabled");
 
-    portENTER_CRITICAL(&g_i2s.spinlock);
+    esp_os_enter_critical(&g_i2s.spinlock);
     lp_i2s_ll_rx_enable_interrupt(chan->ctlr->hal.dev, LP_I2S_LL_EVENT_RX_MEM_THRESHOLD_INT, false);
     lp_i2s_ll_rx_stop(chan->ctlr->hal.dev);
-    portEXIT_CRITICAL(&g_i2s.spinlock);
+    esp_os_exit_critical(&g_i2s.spinlock);
 
     return ESP_OK;
 }
@@ -222,16 +214,16 @@ esp_err_t lp_i2s_del_channel(lp_i2s_chan_handle_t chan)
     ESP_RETURN_ON_FALSE(atomic_load(&(chan->state)) == I2S_CHAN_STATE_READY, ESP_ERR_INVALID_STATE, TAG, "the channel can't be deleted unless it is disabled");
 
     int id = chan->ctlr->id;
-    portENTER_CRITICAL(&g_i2s.spinlock);
+    esp_os_enter_critical(&g_i2s.spinlock);
     if (chan->dir == I2S_DIR_RX) {
         g_i2s.lp_controller[chan->ctlr->id]->rx_chan = NULL;
     }
 
     g_i2s.lp_controller[id] = NULL;
-    portEXIT_CRITICAL(&g_i2s.spinlock);
+    esp_os_exit_critical(&g_i2s.spinlock);
 
     ESP_RETURN_ON_ERROR(esp_intr_free(chan->ctlr->intr), TAG, "failed to free intr");
-    vSemaphoreDeleteWithCaps(chan->semphr);
+    esp_os_delete_sem(&chan->semphr);
     ESP_RETURN_ON_ERROR(i2s_platform_release_occupation(I2S_CTLR_LP, id), TAG, "failed to release lp i2s controller");
     free(chan->ctlr);
     free(chan);
@@ -267,12 +259,12 @@ static inline bool s_lp_i2s_take_available_channel(lp_i2s_controller_t *ctlr, ui
 {
     bool is_available = false;
 
-    portENTER_CRITICAL(&g_i2s.spinlock);
+    esp_os_enter_critical(&g_i2s.spinlock);
     if (!(chan_search_mask & ctlr->chan_occupancy)) {
         ctlr->chan_occupancy |= chan_search_mask;
         is_available = true;
     }
-    portEXIT_CRITICAL(&g_i2s.spinlock);
+    esp_os_exit_critical(&g_i2s.spinlock);
     return is_available;
 }
 
@@ -302,7 +294,7 @@ static void IRAM_ATTR s_i2s_default_isr(void *arg)
 {
     lp_i2s_controller_t *ctlr = (lp_i2s_controller_t *)arg;
     bool need_yield = false;
-    BaseType_t high_task_woken = pdFALSE;
+    bool high_task_woken = false;
     ESP_DRAM_LOGD(TAG, "in isr, rx_mem_fifo_cnt: %d bytes", lp_i2s_ll_get_rx_mem_fifo_cnt(ctlr->hal.dev));
 
     if (ctlr->rx_chan->cbs.on_request_new_trans) {
@@ -326,15 +318,14 @@ static void IRAM_ATTR s_i2s_default_isr(void *arg)
         memcpy(&ctlr->rx_chan->trans, &new_edata.trans, sizeof(lp_i2s_trans_t));
 
     } else {
-        portENTER_CRITICAL_ISR(&g_i2s.spinlock);
+        esp_os_enter_critical_isr(&g_i2s.spinlock);
         lp_i2s_ll_rx_enable_interrupt(ctlr->hal.dev, LP_I2S_LL_EVENT_RX_MEM_THRESHOLD_INT, false);
-        portEXIT_CRITICAL_ISR(&g_i2s.spinlock);
-        xSemaphoreGiveFromISR(ctlr->rx_chan->semphr, &high_task_woken);
+        esp_os_exit_critical_isr(&g_i2s.spinlock);
+        esp_os_post_sem_isr(&ctlr->rx_chan->semphr, &high_task_woken);
     }
 
-    need_yield |= high_task_woken == pdTRUE;
     if (need_yield) {
-        portYIELD_FROM_ISR();
+        OS_PORT_YIELD_FROM_ISR();
     }
 }
 

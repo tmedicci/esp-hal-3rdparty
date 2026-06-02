@@ -7,10 +7,8 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "freertos/task.h"
-#include "freertos/idf_additions.h"
+#include "platform/os.h"
+#include "esp_private/critical_section.h"
 
 #include "sdkconfig.h"
 
@@ -250,10 +248,10 @@ static i2s_controller_t *i2s_acquire_controller_obj(int id)
     i2s_controller_t *i2s_obj = NULL;
     /* Try to occupy this i2s controller */
     if (i2s_platform_acquire_occupation(I2S_CTLR_HP, id, "i2s_driver") == ESP_OK) {
-        portENTER_CRITICAL(&g_i2s.spinlock);
+        esp_os_enter_critical(&g_i2s.spinlock);
         i2s_obj = pre_alloc;
         g_i2s.controller[id] = i2s_obj;
-        portEXIT_CRITICAL(&g_i2s.spinlock);
+        esp_os_exit_critical(&g_i2s.spinlock);
 #if I2S_LL_GET(ADC_DAC_CAPABLE)
         if (id == I2S_NUM_0) {
             adc_ll_digi_set_data_source(0);
@@ -280,11 +278,11 @@ static i2s_controller_t *i2s_acquire_controller_obj(int id)
 #endif  // I2S_USE_RETENTION_LINK
     } else {
         free(pre_alloc);
-        portENTER_CRITICAL(&g_i2s.spinlock);
+        esp_os_enter_critical(&g_i2s.spinlock);
         if (g_i2s.controller[id]) {
             i2s_obj = g_i2s.controller[id];
         }
-        portEXIT_CRITICAL(&g_i2s.spinlock);
+        esp_os_exit_critical(&g_i2s.spinlock);
         if (i2s_obj == NULL) {
             ESP_LOGE(TAG, "i2s%d might be occupied by other component", id);
         }
@@ -297,12 +295,12 @@ static inline bool i2s_take_available_channel(i2s_controller_t *i2s_obj, uint8_t
 {
     bool is_available = false;
 
-    portENTER_CRITICAL(&g_i2s.spinlock);
+    esp_os_enter_critical(&g_i2s.spinlock);
     if (!(chan_search_mask & i2s_obj->chan_occupancy)) {
         i2s_obj->chan_occupancy |= chan_search_mask;
         is_available = true;
     }
-    portEXIT_CRITICAL(&g_i2s.spinlock);
+    esp_os_exit_critical(&g_i2s.spinlock);
     return is_available;
 }
 
@@ -326,12 +324,10 @@ static esp_err_t i2s_register_channel(i2s_controller_t *i2s_obj, i2s_dir_t dir, 
 #if CONFIG_PM_ENABLE
     new_chan->pm_lock = NULL; // Init in i2s_set_clock according to clock source
 #endif
-    new_chan->msg_queue = xQueueCreateWithCaps(desc_num - 1, sizeof(uint8_t *), I2S_MEM_ALLOC_CAPS);
+    new_chan->msg_queue = esp_os_queue_create_with_caps(desc_num - 1, sizeof(uint8_t *), I2S_MEM_ALLOC_CAPS);
     ESP_GOTO_ON_FALSE(new_chan->msg_queue, ESP_ERR_NO_MEM, err, TAG, "No memory for message queue");
-    new_chan->mutex = xSemaphoreCreateMutexWithCaps(I2S_MEM_ALLOC_CAPS);
-    ESP_GOTO_ON_FALSE(new_chan->mutex, ESP_ERR_NO_MEM, err, TAG, "No memory for mutex semaphore");
-    new_chan->binary = xSemaphoreCreateBinaryWithCaps(I2S_MEM_ALLOC_CAPS);
-    ESP_GOTO_ON_FALSE(new_chan->binary, ESP_ERR_NO_MEM, err, TAG, "No memory for binary semaphore");
+    esp_os_create_mutex(&new_chan->mutex);
+    esp_os_create_bin_sem(&new_chan->binary);
 
     new_chan->callbacks.on_recv = NULL;
     new_chan->callbacks.on_recv_q_ovf = NULL;
@@ -358,14 +354,11 @@ static esp_err_t i2s_register_channel(i2s_controller_t *i2s_obj, i2s_dir_t dir, 
     return ret;
 err:
     if (new_chan->msg_queue) {
-        vQueueDeleteWithCaps(new_chan->msg_queue);
+        esp_os_queue_delete_with_caps(new_chan->msg_queue);
+        esp_os_delete_mutex(&new_chan->mutex);
+        esp_os_delete_sem(&new_chan->binary);
     }
-    if (new_chan->mutex) {
-        vSemaphoreDeleteWithCaps(new_chan->mutex);
-    }
-    if (new_chan->binary) {
-        vSemaphoreDeleteWithCaps(new_chan->binary);
-    }
+
     free(new_chan);
 
     return ret;
@@ -384,7 +377,7 @@ esp_err_t i2s_channel_change_port(i2s_chan_handle_t handle, int id)
         return ESP_ERR_NOT_FOUND;
     }
     i2s_controller_t *old_i2s_obj = handle->controller;
-    portENTER_CRITICAL(&g_i2s.spinlock);
+    esp_os_enter_critical(&g_i2s.spinlock);
     if (handle->dir == I2S_DIR_TX) {
         i2s_obj->tx_chan = handle;
         i2s_obj->chan_occupancy |= I2S_DIR_TX;
@@ -399,7 +392,7 @@ esp_err_t i2s_channel_change_port(i2s_chan_handle_t handle, int id)
         old_i2s_obj->chan_occupancy &= ~I2S_DIR_RX;
     }
     handle->controller = i2s_obj;
-    portEXIT_CRITICAL(&g_i2s.spinlock);
+    esp_os_exit_critical(&g_i2s.spinlock);
 
     return ESP_OK;
 }
@@ -433,12 +426,12 @@ esp_err_t i2s_channel_register_event_callback(i2s_chan_handle_t handle, const i2
     }
 #endif
 
-    xSemaphoreTake(handle->mutex, portMAX_DELAY);
+    esp_os_lock_mutex_timeout(&handle->mutex, OS_PORT_MAX_DELAY);
     ESP_GOTO_ON_FALSE(handle->state < I2S_CHAN_STATE_RUNNING, ESP_ERR_INVALID_STATE, err, TAG, "invalid state, I2S has enabled");
     memcpy(&(handle->callbacks), callbacks, sizeof(i2s_event_callbacks_t));
     handle->user_data = user_data;
 err:
-    xSemaphoreGive(handle->mutex);
+    esp_os_unlock_mutex(&handle->mutex);
     return ret;
 }
 
@@ -631,13 +624,13 @@ static bool i2s_dma_rx_callback(gdma_channel_handle_t dma_chan, gdma_event_data_
     if (handle->callbacks.on_recv) {
         user_need_yield |= handle->callbacks.on_recv(handle, &evt, handle->user_data);
     }
-    if (xQueueIsQueueFullFromISR(handle->msg_queue)) {
-        xQueueReceiveFromISR(handle->msg_queue, &dummy, &need_yield1);
+    if (esp_os_queue_is_full_from_isr(handle->msg_queue)) {
+        esp_os_queue_receive_from_isr(handle->msg_queue, &dummy, &need_yield1);
         if (handle->callbacks.on_recv_q_ovf) {
             user_need_yield |= handle->callbacks.on_recv_q_ovf(handle, &evt, handle->user_data);
         }
     }
-    xQueueSendFromISR(handle->msg_queue, &(finish_desc->buf), &need_yield2);
+    esp_os_queue_send_from_isr(handle->msg_queue, &(finish_desc->buf), &need_yield2);
 
     return need_yield1 | need_yield2 | user_need_yield;
 }
@@ -669,8 +662,8 @@ static bool i2s_dma_tx_callback(gdma_channel_handle_t dma_chan, gdma_event_data_
         esp_cache_msync(curr_buf, handle->dma.buf_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
     }
 #endif
-    if (xQueueIsQueueFullFromISR(handle->msg_queue)) {
-        xQueueReceiveFromISR(handle->msg_queue, &dummy, &need_yield1);
+    if (esp_os_queue_is_full_from_isr(handle->msg_queue)) {
+        esp_os_queue_receive_from_isr(handle->msg_queue, &dummy, &need_yield1);
         if (handle->callbacks.on_send_q_ovf) {
             evt.dma_buf = NULL;
             user_need_yield |= handle->callbacks.on_send_q_ovf(handle, &evt, handle->user_data);
@@ -682,7 +675,7 @@ static bool i2s_dma_tx_callback(gdma_channel_handle_t dma_chan, gdma_event_data_
         esp_cache_msync(curr_buf, handle->dma.buf_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
 #endif
     }
-    xQueueSendFromISR(handle->msg_queue, &(finish_desc->buf), &need_yield2);
+    esp_os_queue_send_from_isr(handle->msg_queue, &(finish_desc->buf), &need_yield2);
 
     return need_yield1 | need_yield2 | user_need_yield;
 }
@@ -712,18 +705,18 @@ static void i2s_dma_rx_callback(void *arg)
         if (handle->callbacks.on_recv) {
             user_need_yield |= handle->callbacks.on_recv(handle, &evt, handle->user_data);
         }
-        if (xQueueIsQueueFullFromISR(handle->msg_queue)) {
-            xQueueReceiveFromISR(handle->msg_queue, &dummy, &need_yield1);
+        if (esp_os_queue_is_full_from_isr(handle->msg_queue)) {
+            esp_os_queue_receive_from_isr(handle->msg_queue, &dummy, &need_yield1);
             if (handle->callbacks.on_recv_q_ovf) {
                 evt.dma_buf = NULL;
                 user_need_yield |= handle->callbacks.on_recv_q_ovf(handle, &evt, handle->user_data);
             }
         }
-        xQueueSendFromISR(handle->msg_queue, &(finish_desc->buf), &need_yield2);
+        esp_os_queue_send_from_isr(handle->msg_queue, &(finish_desc->buf), &need_yield2);
     }
 
     if (need_yield1 || need_yield2 || user_need_yield) {
-        portYIELD_FROM_ISR();
+        OS_PORT_YIELD_FROM_ISR();
     }
 }
 
@@ -755,8 +748,8 @@ static void i2s_dma_tx_callback(void *arg)
         if (handle->callbacks.on_sent) {
             user_need_yield |= handle->callbacks.on_sent(handle, &evt, handle->user_data);
         }
-        if (xQueueIsQueueFullFromISR(handle->msg_queue)) {
-            xQueueReceiveFromISR(handle->msg_queue, &dummy, &need_yield1);
+        if (esp_os_queue_is_full_from_isr(handle->msg_queue)) {
+            esp_os_queue_receive_from_isr(handle->msg_queue, &dummy, &need_yield1);
             if (handle->callbacks.on_send_q_ovf) {
                 user_need_yield |= handle->callbacks.on_send_q_ovf(handle, &evt, handle->user_data);
             }
@@ -765,11 +758,11 @@ static void i2s_dma_tx_callback(void *arg)
         if (handle->dma.auto_clear_after_cb) {
             memset(curr_buf, 0, handle->dma.buf_size);
         }
-        xQueueSendFromISR(handle->msg_queue, &(finish_desc->buf), &need_yield2);
+        esp_os_queue_send_from_isr(handle->msg_queue, &(finish_desc->buf), &need_yield2);
     }
 
     if (need_yield1 || need_yield2 || user_need_yield) {
-        portYIELD_FROM_ISR();
+        OS_PORT_YIELD_FROM_ISR();
     }
 }
 #endif
@@ -1117,14 +1110,10 @@ esp_err_t i2s_del_channel(i2s_chan_handle_t handle)
         i2s_free_dma_desc(handle);
     }
     if (handle->msg_queue) {
-        vQueueDeleteWithCaps(handle->msg_queue);
+        esp_os_queue_delete_with_caps(handle->msg_queue);
     }
-    if (handle->mutex) {
-        vSemaphoreDeleteWithCaps(handle->mutex);
-    }
-    if (handle->binary) {
-        vSemaphoreDeleteWithCaps(handle->binary);
-    }
+    esp_os_delete_mutex(&handle->mutex);
+    esp_os_delete_sem(&handle->binary);
 #if SOC_I2S_HW_VERSION_1
     i2s_obj->chan_occupancy = 0;
 #else
@@ -1181,7 +1170,7 @@ esp_err_t i2s_channel_get_info(i2s_chan_handle_t handle, i2s_chan_info_t *chan_i
     return ESP_ERR_NOT_FOUND;
 found:
     /* Assign the handle information */
-    xSemaphoreTake(handle->mutex, portMAX_DELAY);
+    esp_os_lock_mutex_timeout(&handle->mutex, OS_PORT_MAX_DELAY);
     chan_info->id = handle->controller->id;
     chan_info->dir = handle->dir;
     chan_info->role = handle->role;
@@ -1202,7 +1191,7 @@ found:
     } else {
         chan_info->pair_chan = NULL;
     }
-    xSemaphoreGive(handle->mutex);
+    esp_os_unlock_mutex(&handle->mutex);
 
     return ESP_OK;
 }
@@ -1213,7 +1202,7 @@ esp_err_t i2s_channel_enable(i2s_chan_handle_t handle)
 
     esp_err_t ret = ESP_OK;
 
-    xSemaphoreTake(handle->mutex, portMAX_DELAY);
+    esp_os_lock_mutex_timeout(&handle->mutex, OS_PORT_MAX_DELAY);
     ESP_GOTO_ON_FALSE(handle->state == I2S_CHAN_STATE_READY, ESP_ERR_INVALID_STATE, err, TAG, "the channel has already enabled or not initialized");
 #if CONFIG_PM_ENABLE
     esp_pm_lock_acquire(handle->pm_lock);
@@ -1223,17 +1212,17 @@ esp_err_t i2s_channel_enable(i2s_chan_handle_t handle)
     if (handle->dir == I2S_DIR_RX) {
         /* RX queue is reset when the channel is enabled
            In case legacy data received during disable process */
-        xQueueReset(handle->msg_queue);
+        esp_os_queue_reset(handle->msg_queue);
     }
-    xSemaphoreGive(handle->mutex);
+    esp_os_unlock_mutex(&handle->mutex);
     /* Give the binary semaphore to enable reading / writing task */
-    xSemaphoreGive(handle->binary);
+    esp_os_give_sem(&handle->binary);
 
     ESP_LOGD(TAG, "i2s %s channel enabled", handle->dir == I2S_DIR_TX ? "tx" : "rx");
     return ret;
 
 err:
-    xSemaphoreGive(handle->mutex);
+    esp_os_unlock_mutex(&handle->mutex);
     return ret;
 }
 
@@ -1242,14 +1231,14 @@ esp_err_t i2s_channel_disable(i2s_chan_handle_t handle)
     I2S_NULL_POINTER_CHECK(TAG, handle);
     esp_err_t ret = ESP_OK;
 
-    xSemaphoreTake(handle->mutex, portMAX_DELAY);
+    esp_os_lock_mutex_timeout(&handle->mutex, OS_PORT_MAX_DELAY);
     ESP_GOTO_ON_FALSE(handle->state > I2S_CHAN_STATE_READY, ESP_ERR_INVALID_STATE, err, TAG, "the channel has not been enabled yet");
     /* Update the state to force quit the current reading/writing operation */
     handle->state = I2S_CHAN_STATE_READY;
     /* Waiting for reading/wrinting operation quit
      * It should be acquired before assigning the pointer to NULL,
      * otherwise may cause NULL pointer panic while reading/writing threads haven't release the lock */
-    xSemaphoreTake(handle->binary, portMAX_DELAY);
+    esp_os_take_sem_timeout(&handle->binary, OS_PORT_MAX_DELAY);
     /* Reset the descriptor pointer */
     handle->dma.curr_ptr = NULL;
     handle->dma.rw_pos = 0;
@@ -1257,17 +1246,17 @@ esp_err_t i2s_channel_disable(i2s_chan_handle_t handle)
     if (handle->dir == I2S_DIR_TX) {
         /* TX queue is reset when the channel is disabled
            In case the queue is wrongly reset after preload the data */
-        xQueueReset(handle->msg_queue);
+        esp_os_queue_reset(handle->msg_queue);
     }
 #if CONFIG_PM_ENABLE
     esp_pm_lock_release(handle->pm_lock);
 #endif
-    xSemaphoreGive(handle->mutex);
+    esp_os_unlock_mutex(&handle->mutex);
     ESP_LOGD(TAG, "i2s %s channel disabled", handle->dir == I2S_DIR_TX ? "tx" : "rx");
     return ret;
 
 err:
-    xSemaphoreGive(handle->mutex);
+    esp_os_unlock_mutex(&handle->mutex);
     return ret;
 }
 
@@ -1282,14 +1271,14 @@ esp_err_t i2s_channel_preload_data(i2s_chan_handle_t tx_handle, const void *src,
     size_t total_loaded_bytes = 0;
     esp_err_t ret = ESP_OK;
 
-    xSemaphoreTake(tx_handle->mutex, portMAX_DELAY);
+    esp_os_lock_mutex_timeout(&tx_handle->mutex, OS_PORT_MAX_DELAY);
 
     /* The pre-load data will be loaded from the first descriptor */
     if (tx_handle->dma.curr_ptr == NULL) {
-        xQueueReset(tx_handle->msg_queue);
+        esp_os_queue_reset(tx_handle->msg_queue);
         /* Push the rest of descriptors to the queue */
         for (int i = 1; i < tx_handle->dma.desc_num; i++) {
-            ESP_GOTO_ON_FALSE(xQueueSend(tx_handle->msg_queue, &(tx_handle->dma.desc[i]->buf), 0) == pdTRUE,
+            ESP_GOTO_ON_FALSE(esp_os_queue_send(tx_handle->msg_queue, &(tx_handle->dma.desc[i]->buf), 0) == ESP_OK,
                               ESP_FAIL, err, TAG, "Failed to push the descriptor to the queue");
         }
         tx_handle->dma.curr_ptr = (void *)tx_handle->dma.desc[0]->buf;
@@ -1299,7 +1288,7 @@ esp_err_t i2s_channel_preload_data(i2s_chan_handle_t tx_handle, const void *src,
     /* Loop until no bytes in source buff remain or the descriptors are full */
     while (remain_bytes) {
         if (tx_handle->dma.rw_pos == tx_handle->dma.buf_size) {
-            if (xQueueReceive(tx_handle->msg_queue, &(tx_handle->dma.curr_ptr), 0) == pdFALSE) {
+            if (esp_os_queue_receive(tx_handle->msg_queue, &(tx_handle->dma.curr_ptr), 0) == ESP_FAIL) {
                 break;
             }
             tx_handle->dma.rw_pos = 0;
@@ -1323,7 +1312,7 @@ esp_err_t i2s_channel_preload_data(i2s_chan_handle_t tx_handle, const void *src,
     *bytes_loaded = total_loaded_bytes;
 
 err:
-    xSemaphoreGive(tx_handle->mutex);
+    esp_os_unlock_mutex(&tx_handle->mutex);
 
     return ret;
 }
@@ -1342,7 +1331,8 @@ esp_err_t i2s_channel_write(i2s_chan_handle_t handle, const void *src, size_t si
     }
 
     /* The binary semaphore can only be taken when the channel has been enabled and no other writing operation in progress */
-    ESP_RETURN_ON_FALSE(xSemaphoreTake(handle->binary, pdMS_TO_TICKS(timeout_ms)) == pdTRUE, ESP_ERR_INVALID_STATE, TAG, "The channel is not enabled");
+    ESP_RETURN_ON_FALSE(esp_os_take_sem_timeout(&handle->binary, (timeout_ms / OS_TICK_PERIOD_MS)) == 0,
+                        ESP_ERR_INVALID_STATE, TAG, "The channel is not enabled");
     src_byte = (char *)src;
     while (size > 0 && handle->state == I2S_CHAN_STATE_RUNNING) {
         /* Acquire the new DMA buffer while:
@@ -1350,8 +1340,8 @@ esp_err_t i2s_channel_write(i2s_chan_handle_t handle, const void *src, size_t si
          * 2. The current buffer is not set
          * 3. The queue is almost full, i.e., the curr_ptr is nearly to be invalid
          */
-        if (handle->dma.rw_pos == handle->dma.buf_size || handle->dma.curr_ptr == NULL || uxQueueSpacesAvailable(handle->msg_queue) <= 1) {
-            if (xQueueReceive(handle->msg_queue, &(handle->dma.curr_ptr), pdMS_TO_TICKS(timeout_ms)) == pdFALSE) {
+        if (handle->dma.rw_pos == handle->dma.buf_size || handle->dma.curr_ptr == NULL || esp_os_queue_spaces_available(handle->msg_queue) <= 1) {
+            if (esp_os_queue_receive(handle->msg_queue, &(handle->dma.curr_ptr), (timeout_ms / OS_TICK_PERIOD_MS)) == ESP_FAIL) {
                 ret = ESP_ERR_TIMEOUT;
                 break;
             }
@@ -1374,7 +1364,7 @@ esp_err_t i2s_channel_write(i2s_chan_handle_t handle, const void *src, size_t si
             (*bytes_written) += bytes_can_write;
         }
     }
-    xSemaphoreGive(handle->binary);
+    esp_os_give_sem(&handle->binary);
 
     return ret;
 }
@@ -1393,15 +1383,16 @@ esp_err_t i2s_channel_read(i2s_chan_handle_t handle, void *dest, size_t size, si
     }
     dest_byte = (uint8_t *)dest;
     /* The binary semaphore can only be taken when the channel has been enabled and no other reading operation in progress */
-    ESP_RETURN_ON_FALSE(xSemaphoreTake(handle->binary, pdMS_TO_TICKS(timeout_ms)) == pdTRUE, ESP_ERR_INVALID_STATE, TAG, "The channel is not enabled");
+    ESP_RETURN_ON_FALSE(esp_os_take_sem_timeout(&handle->binary, (timeout_ms / OS_TICK_PERIOD_MS)) == 0,
+                        ESP_ERR_INVALID_STATE, TAG, "The channel is not enabled");
     while (size > 0 && handle->state == I2S_CHAN_STATE_RUNNING) {
         /* Acquire the new DMA buffer while:
          * 1. The current buffer is fully filled
          * 2. The current buffer is not set
          * 3. The queue is almost full, i.e., the curr_ptr is nearly to be invalid
          */
-        if (handle->dma.rw_pos == handle->dma.buf_size || handle->dma.curr_ptr == NULL || uxQueueSpacesAvailable(handle->msg_queue) <= 1) {
-            if (xQueueReceive(handle->msg_queue, &(handle->dma.curr_ptr), pdMS_TO_TICKS(timeout_ms)) == pdFALSE) {
+        if (handle->dma.rw_pos == handle->dma.buf_size || handle->dma.curr_ptr == NULL || esp_os_queue_spaces_available(handle->msg_queue) <= 1) {
+            if (esp_os_queue_receive(handle->msg_queue, &(handle->dma.curr_ptr), (timeout_ms / OS_TICK_PERIOD_MS)) == ESP_FAIL) {
                 ret = ESP_ERR_TIMEOUT;
                 break;
             }
@@ -1421,7 +1412,7 @@ esp_err_t i2s_channel_read(i2s_chan_handle_t handle, void *dest, size_t size, si
             (*bytes_read) += bytes_can_read;
         }
     }
-    xSemaphoreGive(handle->binary);
+    esp_os_give_sem(&handle->binary);
 
     return ret;
 }
@@ -1438,7 +1429,7 @@ esp_err_t i2s_channel_tune_rate(i2s_chan_handle_t handle, const i2s_tuning_confi
 
     /* If no tuning configuration given, just return the current information */
     if (tune_cfg == NULL) {
-        xSemaphoreTake(handle->mutex, portMAX_DELAY);
+        esp_os_lock_mutex_timeout(&handle->mutex, OS_PORT_MAX_DELAY);
         goto result;
     }
     ESP_RETURN_ON_FALSE(tune_cfg->max_delta_mclk >= tune_cfg->min_delta_mclk, ESP_ERR_INVALID_ARG, TAG, "invalid range");
@@ -1465,7 +1456,7 @@ esp_err_t i2s_channel_tune_rate(i2s_chan_handle_t handle, const i2s_tuning_confi
     } else if ((int32_t)new_mclk - (int32_t)handle->origin_mclk_hz < tune_cfg->min_delta_mclk) {
         new_mclk = handle->origin_mclk_hz + tune_cfg->min_delta_mclk;
     }
-    xSemaphoreTake(handle->mutex, portMAX_DELAY);
+    esp_os_lock_mutex_timeout(&handle->mutex, OS_PORT_MAX_DELAY);
 #if SOC_CLK_APLL_SUPPORTED
     if (handle->clk_src == I2S_CLK_SRC_APLL) {
         periph_rtc_apll_release();
@@ -1505,13 +1496,13 @@ result:
         uint32_t tot_size = handle->dma.buf_size * handle->dma.desc_num;
         uint32_t used_size = 0;
         if (handle->dir == I2S_DIR_TX) {
-            used_size = uxQueueSpacesAvailable(handle->msg_queue) * handle->dma.buf_size + handle->dma.rw_pos;
+            used_size = esp_os_queue_spaces_available(handle->msg_queue) * handle->dma.buf_size + handle->dma.rw_pos;
         } else {
-            used_size = uxQueueMessagesWaiting(handle->msg_queue) * handle->dma.buf_size + handle->dma.buf_size - handle->dma.rw_pos;
+            used_size = esp_os_queue_messages_waiting(handle->msg_queue) * handle->dma.buf_size + handle->dma.buf_size - handle->dma.rw_pos;
         }
         tune_info->water_mark = used_size * 100 / tot_size;
     }
-    xSemaphoreGive(handle->mutex);
+    esp_os_unlock_mutex(&handle->mutex);
     return ESP_OK;
 }
 

@@ -8,9 +8,7 @@
 
 #include <sys/lock.h>
 #include <stdatomic.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-#include "freertos/queue.h"
+#include "platform/os.h"
 #include "soc/lldesc.h"
 #include "soc/soc_caps.h"
 #include "hal/i2s_periph.h"
@@ -26,6 +24,7 @@
 #if SOC_GDMA_SUPPORTED
 #include "esp_private/gdma.h"
 #endif
+#include "esp_private/critical_section.h"
 #include "esp_private/periph_ctrl.h"
 #include "esp_private/esp_gpio_reserve.h"
 #if SOC_HAS(PAU)
@@ -53,7 +52,10 @@ extern "C" {
 #define I2S_USE_RETENTION_LINK  (SOC_HAS(PAU) && CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP)
 
 #define I2S_NULL_POINTER_CHECK(tag, p)          ESP_RETURN_ON_FALSE((p), ESP_ERR_INVALID_ARG, tag, "input parameter '"#p"' is NULL")
+
+#ifndef MAX
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif /* MAX */
 
 /**
  * @brief i2s channel state for checking if the operation in under right driver state
@@ -167,12 +169,12 @@ struct i2s_channel_obj_t {
     uint32_t                curr_mclk_hz;   /*!< Current mclk frequency */
     uint32_t                bclk_hz;        /*!< BCLK frequency */
     /* Locks and queues */
-    SemaphoreHandle_t       mutex;          /*!< Mutex semaphore for the channel operations */
-    SemaphoreHandle_t       binary;         /*!< Binary semaphore for writing / reading / enabling / disabling */
+    esp_os_mutex_t          mutex;          /*!< Mutex semaphore for the channel operations */
+    esp_os_sem_t            binary;         /*!< Binary semaphore for writing / reading / enabling / disabling */
 #if CONFIG_PM_ENABLE
     esp_pm_lock_handle_t    pm_lock;        /*!< Power management lock, to avoid apb clock frequency changes while i2s is working */
 #endif
-    QueueHandle_t           msg_queue;      /*!< Message queue handler, used for transporting data between interrupt and read/write task */
+    DECLARE_QUEUE_IN_STRUCT(msg_queue)      /*!< Message queue handler, used for transporting data between interrupt and read/write task */
     uint64_t                reserve_gpio_mask; /*!< The gpio mask that has been reserved by I2S */
     i2s_event_callbacks_internal_t   callbacks;      /*!< Callback functions */
     void                    *user_data;     /*!< User data for callback functions */
@@ -201,7 +203,7 @@ struct lp_i2s_channel_obj_t {
     i2s_role_t                 role;           /*!< lp i2s role */
     i2s_dir_t                  dir;            /*!< lp i2s channel direction */
     _Atomic i2s_state_t        state;          /*!< lp i2s driver state. Ensuring the driver working in a correct sequence */
-    SemaphoreHandle_t          semphr;         /*!< lp i2s event semphr*/
+    esp_os_sem_t               semphr;         /*!< lp i2s event semphr*/
     lp_i2s_trans_t             trans;          /*!< transaction */
     size_t                     threshold;      /*!< lp i2s threshold*/
     lp_i2s_evt_cbs_internal_t  cbs;            /*!< callbacks */
@@ -213,11 +215,11 @@ struct lp_i2s_channel_obj_t {
  * @note  All i2s controllers' resources are involved
  */
 typedef struct {
-    portMUX_TYPE            spinlock;                          /*!< Platform level lock */
+    DECLARE_CRIT_SECTION_LOCK_IN_STRUCT(spinlock)                       /*!< Platform level lock */
     i2s_controller_t        *controller[I2S_LL_GET(INST_NUM)];          /*!< Controller object */
     const char              *comp_name[I2S_LL_GET(INST_NUM)];           /*!< The component name that occupied i2s controller */
 #if SOC_LP_I2S_SUPPORTED
-    lp_i2s_controller_t     *lp_controller[SOC_LP_I2S_NUM];    /*!< LP controller object*/
+    lp_i2s_controller_t     *lp_controller[SOC_LP_I2S_NUM];             /*!< LP controller object*/
     const char              *lp_comp_name[I2S_LL_GET(INST_NUM)];        /*!< The component name that occupied lp i2s controller */
 #endif
 } i2s_platform_t;

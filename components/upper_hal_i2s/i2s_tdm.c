@@ -6,9 +6,9 @@
 
 #include <string.h>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
+#include "platform/os.h"
 #include "sdkconfig.h"
+#include "esp_private/critical_section.h"
 
 #if CONFIG_I2S_ENABLE_DEBUG_LOG
 // The local log level must be defined before including esp_log.h
@@ -83,7 +83,7 @@ static esp_err_t i2s_tdm_set_clock(i2s_chan_handle_t handle, const i2s_tdm_clk_c
     ESP_RETURN_ON_ERROR(i2s_tdm_calculate_clock(handle, clk_cfg, &clk_info), TAG, "clock calculate failed");
 
     hal_utils_clk_div_t ret_mclk_div = {};
-    portENTER_CRITICAL(&g_i2s.spinlock);
+    esp_os_enter_critical(&g_i2s.spinlock);
     /* Set clock configurations in HAL*/
     PERIPH_RCC_ATOMIC() {
         if (handle->dir == I2S_DIR_TX) {
@@ -92,7 +92,7 @@ static esp_err_t i2s_tdm_set_clock(i2s_chan_handle_t handle, const i2s_tdm_clk_c
             i2s_hal_set_rx_clock(&handle->controller->hal, &clk_info, clk_cfg->clk_src, &ret_mclk_div);
         }
     }
-    portEXIT_CRITICAL(&g_i2s.spinlock);
+    esp_os_exit_critical(&g_i2s.spinlock);
     uint64_t tmp_div = (uint64_t)ret_mclk_div.integer * ret_mclk_div.denominator + ret_mclk_div.numerator;
     ESP_RETURN_ON_FALSE(tmp_div != 0 && ret_mclk_div.denominator != 0, ESP_ERR_INVALID_ARG, TAG, "invalid mclk division result");
 
@@ -158,14 +158,14 @@ static esp_err_t i2s_tdm_set_slot(i2s_chan_handle_t handle, const i2s_tdm_slot_c
     }
     bool is_slave = handle->role == I2S_ROLE_SLAVE;
 
-    portENTER_CRITICAL(&g_i2s.spinlock);
+    esp_os_enter_critical(&g_i2s.spinlock);
     /* Configure the hardware to apply TDM format */
     if (handle->dir == I2S_DIR_TX) {
         i2s_hal_tdm_set_tx_slot(&(handle->controller->hal), is_slave, (i2s_hal_slot_config_t *)slot_cfg);
     } else {
         i2s_hal_tdm_set_rx_slot(&(handle->controller->hal), is_slave, (i2s_hal_slot_config_t *)slot_cfg);
     }
-    portEXIT_CRITICAL(&g_i2s.spinlock);
+    esp_os_exit_critical(&g_i2s.spinlock);
 
     /* Update the mode info: slot configuration */
     i2s_tdm_config_t *tdm_cfg = (i2s_tdm_config_t *)(handle->mode_info);
@@ -294,7 +294,7 @@ esp_err_t i2s_channel_init_tdm_mode(i2s_chan_handle_t handle, const i2s_tdm_conf
     I2S_NULL_POINTER_CHECK(TAG, handle);
     esp_err_t ret = ESP_OK;
 
-    xSemaphoreTake(handle->mutex, portMAX_DELAY);
+    esp_os_lock_mutex_timeout(&handle->mutex, OS_PORT_MAX_DELAY);
     ESP_GOTO_ON_FALSE(handle->state == I2S_CHAN_STATE_REGISTER, ESP_ERR_INVALID_STATE, err, TAG, "the channel has initialized already");
     handle->mode = I2S_COMM_MODE_TDM;
     /* Allocate memory for storing the configurations of TDM mode */
@@ -341,13 +341,13 @@ esp_err_t i2s_channel_init_tdm_mode(i2s_chan_handle_t handle, const i2s_tdm_conf
 
     /* Initialization finished, mark state as ready */
     handle->state = I2S_CHAN_STATE_READY;
-    xSemaphoreGive(handle->mutex);
+    esp_os_unlock_mutex(&handle->mutex);
     ESP_LOGD(TAG, "The %s channel on I2S%d has been initialized to TDM mode successfully",
              handle->dir == I2S_DIR_TX ? "tx" : "rx", handle->controller->id);
     return ret;
 
 err:
-    xSemaphoreGive(handle->mutex);
+    esp_os_unlock_mutex(&handle->mutex);
     return ret;
 }
 
@@ -358,7 +358,7 @@ esp_err_t i2s_channel_reconfig_tdm_clock(i2s_chan_handle_t handle, const i2s_tdm
 
     esp_err_t ret = ESP_OK;
 
-    xSemaphoreTake(handle->mutex, portMAX_DELAY);
+    esp_os_lock_mutex_timeout(&handle->mutex, OS_PORT_MAX_DELAY);
     ESP_GOTO_ON_FALSE(handle->mode == I2S_COMM_MODE_TDM, ESP_ERR_INVALID_ARG, err, TAG, "this handle is not working in standard mode");
     ESP_GOTO_ON_FALSE(handle->state == I2S_CHAN_STATE_READY, ESP_ERR_INVALID_STATE, err, TAG, "invalid state, I2S should be disabled before reconfiguring the clock");
     i2s_tdm_config_t *tdm_cfg = (i2s_tdm_config_t *)handle->mode_info;
@@ -395,11 +395,11 @@ esp_err_t i2s_channel_reconfig_tdm_clock(i2s_chan_handle_t handle, const i2s_tdm
     }
 #endif //CONFIG_PM_ENABLE
 
-    xSemaphoreGive(handle->mutex);
+    esp_os_unlock_mutex(&handle->mutex);
 
     return ESP_OK;
 err:
-    xSemaphoreGive(handle->mutex);
+    esp_os_unlock_mutex(&handle->mutex);
     return ret;
 }
 
@@ -410,7 +410,7 @@ esp_err_t i2s_channel_reconfig_tdm_slot(i2s_chan_handle_t handle, const i2s_tdm_
 
     esp_err_t ret = ESP_OK;
 
-    xSemaphoreTake(handle->mutex, portMAX_DELAY);
+    esp_os_lock_mutex_timeout(&handle->mutex, OS_PORT_MAX_DELAY);
     ESP_GOTO_ON_FALSE(handle->mode == I2S_COMM_MODE_TDM, ESP_ERR_INVALID_ARG, err, TAG, "this handle is not working in standard mode");
     ESP_GOTO_ON_FALSE(handle->state == I2S_CHAN_STATE_READY, ESP_ERR_INVALID_STATE, err, TAG, "invalid state, I2S should be disabled before reconfiguring the slot");
 
@@ -426,13 +426,13 @@ esp_err_t i2s_channel_reconfig_tdm_slot(i2s_chan_handle_t handle, const i2s_tdm_
     }
 
     /* Reset queue */
-    xQueueReset(handle->msg_queue);
+    esp_os_queue_reset(handle->msg_queue);
 
-    xSemaphoreGive(handle->mutex);
+    esp_os_unlock_mutex(&handle->mutex);
 
     return ESP_OK;
 err:
-    xSemaphoreGive(handle->mutex);
+    esp_os_unlock_mutex(&handle->mutex);
     return ret;
 }
 
@@ -443,7 +443,7 @@ esp_err_t i2s_channel_reconfig_tdm_gpio(i2s_chan_handle_t handle, const i2s_tdm_
 
     esp_err_t ret = ESP_OK;
 
-    xSemaphoreTake(handle->mutex, portMAX_DELAY);
+    esp_os_lock_mutex_timeout(&handle->mutex, OS_PORT_MAX_DELAY);
     ESP_GOTO_ON_FALSE(handle->mode == I2S_COMM_MODE_TDM, ESP_ERR_INVALID_ARG, err, TAG, "This handle is not working in standard mode");
     ESP_GOTO_ON_FALSE(handle->state == I2S_CHAN_STATE_READY, ESP_ERR_INVALID_STATE, err, TAG, "Invalid state, I2S should be disabled before reconfiguring the gpio");
 
@@ -451,10 +451,10 @@ esp_err_t i2s_channel_reconfig_tdm_gpio(i2s_chan_handle_t handle, const i2s_tdm_
         i2s_output_gpio_revoke(handle, handle->reserve_gpio_mask);
     }
     ESP_GOTO_ON_ERROR(i2s_tdm_set_gpio(handle, gpio_cfg), err, TAG, "set i2s standard slot failed");
-    xSemaphoreGive(handle->mutex);
+    esp_os_unlock_mutex(&handle->mutex);
 
     return ESP_OK;
 err:
-    xSemaphoreGive(handle->mutex);
+    esp_os_unlock_mutex(&handle->mutex);
     return ret;
 }
